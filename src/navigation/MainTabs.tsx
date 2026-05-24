@@ -1,0 +1,88 @@
+import React from 'react';
+import { Platform } from 'react-native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { FeedNavigator } from './FeedNavigator';
+import { SearchScreen } from '../screens/SearchScreen';
+import { PostScreen } from '../screens/PostScreen';
+import { AgentsScreen } from '../screens/AgentsScreen';
+import { ProfileScreen } from '../screens/ProfileScreen';
+import { EditProfileScreen } from '../screens/EditProfileScreen';
+import { ListingDetailScreen } from '../screens/ListingDetailScreen';
+import { CommentsScreen } from '../screens/CommentsScreen';
+import { ProfileStackParamList } from './types';
+import { colors } from '../theme/colors';
+
+const Tab = createBottomTabNavigator();
+const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
+
+function ProfileNavigator() {
+  return (
+    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+      <ProfileStack.Screen name="ProfileMain" component={ProfileScreen} />
+      <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} />
+      <ProfileStack.Screen name="ListingDetail" component={ListingDetailScreen} />
+      <ProfileStack.Screen name="Comments" component={CommentsScreen} />
+    </ProfileStack.Navigator>
+  );
+}
+
+const TAB_BAR_CONTENT_HEIGHT = 56;
+
+export function MainTabs() {
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(
+    insets.bottom,
+    Platform.OS === 'android' ? 16 : 0
+  );
+  const tabBarHeight = TAB_BAR_CONTENT_HEIGHT + bottomInset;
+
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.tabInactive,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          height: tabBarHeight,
+          paddingBottom: bottomInset,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+        },
+        tabBarIcon: ({ focused, color, size }) => {
+          const icons: Record<string, keyof typeof Ionicons.glyphMap> = {
+            Feed: focused ? 'home' : 'home-outline',
+            Search: focused ? 'search' : 'search-outline',
+            Post: focused ? 'add-circle' : 'add-circle-outline',
+            Agents: focused ? 'people' : 'people-outline',
+            Profile: focused ? 'person' : 'person-outline',
+          };
+          return (
+            <Ionicons name={icons[route.name]} size={size} color={color} />
+          );
+        },
+      })}
+    >
+      <Tab.Screen name="Feed" component={FeedNavigator} />
+      <Tab.Screen name="Search" component={SearchScreen} />
+      <Tab.Screen
+        name="Post"
+        component={PostScreen}
+        options={{ tabBarLabel: 'Post' }}
+      />
+      <Tab.Screen name="Agents" component={AgentsScreen} />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileNavigator}
+        options={{ tabBarLabel: 'Profile' }}
+      />
+    </Tab.Navigator>
+  );
+}

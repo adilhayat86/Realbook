@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DealerTribe — All Screens</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1a1a2e;
+      padding: 32px;
+      min-width: 1320px;
+    }
+    h1 { color: #fff; text-align: center; font-size: 28px; margin-bottom: 8px; }
+    .subtitle {
+      color: #8696A0; text-align: center; margin-bottom: 28px; font-size: 14px;
+    }
+    .grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 24px; max-width: 1320px; margin: 0 auto;
+    }
+    .phone-wrap { display: flex; flex-direction: column; align-items: center; }
+    .label {
+      color: #25D366; font-weight: 700; font-size: 13px;
+      margin-bottom: 10px; letter-spacing: 0.5px; text-transform: uppercase;
+    }
+    .phone {
+      width: 280px; height: 520px; border-radius: 28px; overflow: hidden;
+      border: 3px solid #333; background: #ECE5DD;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+      display: flex; flex-direction: column; font-size: 11px;
+    }
+    .hdr {
+      background: #075E54; color: #fff;
+      padding: 28px 12px 12px; flex-shrink: 0;
+    }
+    .hdr h2 { font-size: 16px; font-weight: 700; }
+    .hdr p { font-size: 10px; opacity: 0.85; margin-top: 2px; }
+    .hdr.big { padding: 40px 12px 24px; text-align: center; }
+    .hdr.big h2 { font-size: 22px; }
+    .body { flex: 1; overflow: hidden; padding: 8px; }
+    .card {
+      background: #fff; border-radius: 8px; padding: 10px;
+      margin-bottom: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .row { display: flex; align-items: center; gap: 8px; }
+    .av {
+      width: 32px; height: 32px; border-radius: 50%; background: #128C7E;
+      color: #fff; display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 14px; flex-shrink: 0;
+    }
+    .name { font-weight: 600; color: #111B21; font-size: 12px; }
+    .meta { color: #667781; font-size: 10px; }
+    .price { color: #075E54; font-weight: 700; font-size: 11px; margin-left: auto; }
+    .soc { font-weight: 600; color: #111B21; font-size: 11px; margin-top: 6px; }
+    .tag {
+      display: inline-block; background: #E7F8EE; color: #075E54;
+      font-size: 9px; padding: 2px 8px; border-radius: 10px;
+      margin: 2px 2px 0 0; font-weight: 600;
+    }
+    .chip {
+      display: inline-block; background: #F0F2F5; border: 1px solid #E9EDEF;
+      padding: 4px 10px; border-radius: 12px; margin: 2px;
+      font-size: 9px; color: #667781;
+    }
+    .chip.on { background: #E7F8EE; color: #075E54; border-color: #128C7E; font-weight: 600; }
+    .sec { font-size: 10px; font-weight: 600; color: #075E54; margin: 8px 0 4px; }
+    .inp {
+      background: #fff; border: 1px solid #E9EDEF; border-radius: 6px;
+      padding: 8px; margin-bottom: 6px; color: #8696A0; font-size: 10px;
+    }
+    .btn {
+      background: #25D366; color: #fff; text-align: center;
+      padding: 10px; border-radius: 6px; font-weight: 600;
+      font-size: 12px; margin-top: 8px;
+    }
+    .tabs {
+      display: flex; background: #fff; border-top: 1px solid #E9EDEF;
+      padding: 6px 4px 10px; flex-shrink: 0;
+    }
+    .tab { flex: 1; text-align: center; font-size: 8px; color: #8696A0; }
+    .tab.on { color: #075E54; font-weight: 600; }
+    .tab i { display: block; font-size: 14px; margin-bottom: 2px; font-style: normal; }
+    .steps { display: flex; justify-content: space-between; padding: 8px; background: #fff; }
+    .dot {
+      width: 22px; height: 22px; border-radius: 50%; background: #128C7E;
+      color: #fff; font-size: 10px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 4px;
+    }
+    .dot.dim { background: #F0F2F5; color: #8696A0; }
+    .agent-row {
+      display: flex; align-items: center; background: #fff;
+      border-radius: 8px; padding: 8px; margin-bottom: 4px;
+    }
+    .follow {
+      background: #25D366; color: #fff; font-size: 9px; font-weight: 600;
+      padding: 5px 12px; border-radius: 12px;
+    }
+    .follow.off { background: #F0F2F5; color: #667781; border: 1px solid #E9EDEF; }
+    .profile-card {
+      background: #fff; border-radius: 10px; padding: 16px;
+      text-align: center; margin-bottom: 8px;
+    }
+    .profile-card .av { width: 56px; height: 56px; margin: 0 auto 8px; font-size: 24px; }
+    .login-form { padding: 16px; background: #ECE5DD; flex: 1; }
+    .hint { font-size: 9px; color: #8696A0; text-align: center; margin-top: 8px; }
+    .flex1 { flex: 1; }
+    .step-lbl { font-size: 8px; text-align: center; }
+    .step-lbl.on { color: #075E54; }
+    .step-lbl.off { color: #8696A0; }
+  </style>
+</head>
+<body>
+  <h1>DealerTribe</h1>
+  <p class="subtitle">All app screens · Win+Shift+S to capture · Upload one image to ChatGPT</p>
+
+  <motion class="grid"></motion>
+  <motion class="grid"></motion>
+  <div class="grid">
+
+    <div class="phone-wrap">
+      <span class="label">Login</span>
+      <div class="phone">
+        <motion class="hdr big"><h2>DealerTribe</h2><p>Agent network for Pakistan</p></motion>
+        <div class="login-form">
+          <p style="font-weight:600;color:#111B21;margin-bottom:12px;font-size:13px">Sign in to continue</p>
+          <div class="sec">Mobile Number</div>
+          <div class="inp">03XX XXXXXXX</div>
+          <div class="sec">Password</motion>
+          <div class="inp">••••••••</div>
+          <div class="btn">Login</div>
+          <p class="hint">Mobile + password (no OTP)</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="phone-wrap">
+      <span class="label">Feed</span>
+      <div class="phone">
+        <div class="hdr"><h2>Feed</h2><p>Latest property listings</p></div>
+        <div class="body">
+          <div class="card">
+            <div class="row">
+              <motion class="av">S</motion>
+              <div class="flex1"><div class="name">Sara Malik</div><div class="meta">Plot · 10 Marla</motion></motion>
+              <div class="price">Rs 1.85 Cr</div>
+            </div>
+            <div class="soc">DHA Phase 6</div><div class="meta">Phase 6</div>
+            <span class="tag">Corner</span><span class="tag">Park Facing</span>
+          </div>
+          <div class="card">
+            <div class="row">
+              <div class="av">U</div>
+              <div class="flex1"><div class="name">Usman Ali</div><div class="meta">House · 1 Kanal</div></div>
+              <div class="price">Rs 4.20 Cr</div>
+            </div>
+            <div class="soc">Bahria Town</div><div class="meta">Sector C</div>
+            <span class="tag">Main Boulevard</span>
+          </div>
+        </div>
+        <div class="tabs">
+          <div class="tab on"><i>⌂</i>Feed</div>
+          <motion class="tab"><i>⌕</i>Search</motion>
+          <div class="tab"><i>+</i>Post</div>
+          <div class="tab"><i>👥</i>Agents</div>
+          <div class="tab"><i>👤</i>Profile</div>
+        </motion>
+      </div>
+    </div>
+
+    <div class="phone-wrap">
+      <span class="label">Search</span>
+      <div class="phone">
+        <div class="hdr"><h2>Search</h2><p>Filter properties</p></div>
+        <div class="body">
+          <div class="sec">Property Type</div>
+          <span class="chip on">Plot</span><span class="chip">House</span><span class="chip">Flat</span>
+          <div class="sec">Society</div>
+          <span class="chip on">DHA Phase 6</span><span class="chip">Bahria Town</span>
+          <div class="sec">Special Tags</div>
+          <span class="chip on">Corner</span><span class="chip">Biana</span><span class="chip">Park Facing</span>
+          <div class="btn">Search Listings</div>
+          <p class="hint">No listings until filters applied</p>
+        </div>
+        <div class="tabs">
+          <div class="tab"><i>⌂</i>Feed</div>
+          <div class="tab on"><i>⌕</i>Search</div>
+          <div class="tab"><i>+</i>Post</div>
+          <div class="tab"><i>👥</i>Agents</div>
+          <div class="tab"><i>👤</i>Profile</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phone-wrap">
+      <span class="label">Post (3 steps)</span>
+      <motion class="phone">
+        <div class="hdr"><h2>Post Listing</h2><p>Step 1 of 3</p></div>
+        <div class="steps">
+          <div><div class="dot">1</motion><div class="step-lbl on">Property</div></div>
+          <div><div class="dot dim">2</div><div class="step-lbl off">Location</div></div>
+          <div><div class="dot dim">3</div><div class="step-lbl off">Tags</div></div>
+        </div>
+        <div class="body">
+          <div class="sec">Property Type</div>
+          <span class="chip on">Plot</span><span class="chip">House</span><span class="chip">Flat</span>
+          <div class="sec">Size</div>
+          <div class="inp">10 Marla</div>
+        </div>
+        <div class="tabs">
+          <div class="tab"><i>⌂</i>Feed</div>
+          <div class="tab"><i>⌕</i>Search</div>
+          <div class="tab on"><i>+</i>Post</div>
+          <div class="tab"><i>👥</i>Agents</div>
+          <div class="tab"><i>👤</i>Profile</div>
+        </div>
+      </motion>
+    </div>
+
+    <div class="phone-wrap">
+      <span class="label">Agents</span>
+      <div class="phone">
+        <div class="hdr"><h2>Agents</h2><p>Connect with fellow agents</p></div>
+        <div class="body">
+          <motion class="sec" style="margin-top:4px">FOLLOWING</motion>
+          <div class="agent-row">
+            <div class="av">S</div>
+            <div class="flex1"><motion class="name">Sara Malik</motion><div class="meta">Malik Estate · Lahore</div></div>
+            <span class="follow off">Following</span>
+          </div>
+          <div class="sec">DISCOVER</div>
+          <div class="agent-row">
+            <div class="av">U</div>
+            <div class="flex1"><div class="name">Usman Ali</div><div class="meta">Ali Realtors · Islamabad</div></div>
+            <span class="follow">Follow</span>
+          </div>
+        </div>
+        <div class="tabs">
+          <div class="tab"><i>⌂</i>Feed</div>
+          <div class="tab"><i>⌕</i>Search</div>
+          <div class="tab"><i>+</i>Post</div>
+          <div class="tab on"><i>👥</i>Agents</div>
+          <div class="tab"><i>👤</i>Profile</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phone-wrap">
+      <span class="label">Profile</span>
+      <div class="phone">
+        <div class="hdr"><h2>Profile</h2></div>
+        <div class="body">
+          <div class="profile-card">
+            <div class="av">A</div>
+            <div class="name" style="font-size:14px">Ahmed Khan</div>
+            <div class="meta">Khan Properties · Lahore</div>
+            <div class="meta" style="margin-top:6px;color:#075E54">03001234567</div>
+          </div>
+          <div class="card row">
+            <span>✎</span><span class="flex1" style="font-weight:500">Edit Profile</span><span>›</span>
+          </div>
+          <div class="card row">
+            <span style="color:#EA4335">↪</span><span style="color:#EA4335;font-weight:500">Logout</span>
+          </div>
+        </div>
+        <div class="tabs">
+          <div class="tab"><i>⌂</i>Feed</div>
+          <div class="tab"><i>⌕</i>Search</div>
+          <motion class="tab"><i>+</i>Post</motion>
+          <div class="tab"><i>👥</i>Agents</div>
+          <div class="tab on"><i>👤</i>Profile</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
