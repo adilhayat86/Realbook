@@ -1,4 +1,4 @@
-import { Agent, Listing, UserProfile } from '../types';
+import { Agent, Listing, UserProfile } from '@/types';
 
 export type FeedListing = Listing & {
   matchReasons: ('expertise' | 'friend')[];
@@ -13,9 +13,9 @@ function matchesExpertise(listing: Listing, areas: string[]): boolean {
 
 function getFriendLabel(
   listing: Listing,
-  agents: Agent[]
+  agentMap: Map<string, Agent>
 ): string | undefined {
-  const agent = agents.find((a) => a.id === listing.agentId);
+  const agent = agentMap.get(listing.agentId);
   if (!agent) return 'In your network';
   return `Following · ${agent.city}`;
 }
@@ -28,6 +28,9 @@ export function getRankedFeedListings(
   const followingIds = new Set(
     agents.filter((a) => a.isFollowing).map((a) => a.id)
   );
+  
+  // Create a Map for O(1) agent lookup instead of O(N) array.find
+  const agentMap = new Map(agents.map((a) => [a.id, a]));
 
   return listings
     .map((listing) => {
@@ -46,7 +49,7 @@ export function getRankedFeedListings(
         ...listing,
         matchReasons,
         friendProximityLabel: friendMatch
-          ? getFriendLabel(listing, agents)
+          ? getFriendLabel(listing, agentMap)
           : undefined,
       };
 

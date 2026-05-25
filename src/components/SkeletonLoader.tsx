@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { colors } from '../theme/colors';
+import { colors } from '@/theme/colors';
 
 interface SkeletonLoaderProps {
   style?: any;

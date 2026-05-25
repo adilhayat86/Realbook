@@ -1,9 +1,9 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useAuth } from '../context/AuthContext';
-import { LoginScreen } from '../screens/LoginScreen';
-import { SignUpScreen } from '../screens/SignUpScreen';
+import { useAuth } from '@/context/AuthContext';
+import { LoginScreen } from '@/features/auth/screens/LoginScreen';
+import { SignUpScreen } from '@/features/auth/screens/SignUpScreen';
 import { MainTabs } from './MainTabs';
 import { RootStackParamList } from './types';
 

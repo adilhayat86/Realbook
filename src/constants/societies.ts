@@ -359,7 +359,7 @@ export const getPhasesForSociety = (
   city: "Rawalpindi" | "Islamabad",
   society: string
 ): string[] => {
-  const cityData = TWIN_CITIES_AREAS[city] as Record<string, Record<string, string[]>>;
+  const cityData = TWIN_CITIES_AREAS[city] as any;
   const societyData = cityData[society];
   if (!societyData) return [];
   return Object.keys(societyData);
@@ -371,7 +371,7 @@ export const getBlocksForPhase = (
   society: string,
   phase: string
 ): string[] => {
-  const cityData = TWIN_CITIES_AREAS[city] as Record<string, Record<string, Record<string, string[]>>>;
+  const cityData = TWIN_CITIES_AREAS[city] as any;
   return cityData[society]?.[phase] || [];
 };
 

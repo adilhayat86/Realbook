@@ -15,6 +15,7 @@ export interface Conversation {
   lastMessage: string;
   time: string;
   unread: number;
+  photo?: string;
 }
 
 export interface ChatMessage {
@@ -31,6 +32,7 @@ export interface FriendRequest {
   agency: string;
   city: string;
   mutualFriends: number;
+  photo?: string;
 }
 
 export const MOCK_NOTIFICATIONS: AppNotification[] = [
@@ -85,6 +87,7 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     lastMessage: 'Can you share the plot dimensions?',
     time: '2m ago',
     unread: 2,
+    photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200',
   },
   {
     id: 'c2',
@@ -94,6 +97,7 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     lastMessage: 'Client is interested in Bahria listing.',
     time: '45m ago',
     unread: 1,
+    photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200',
   },
   {
     id: 'c3',
@@ -103,6 +107,7 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     lastMessage: 'Thanks, I will visit tomorrow.',
     time: '3h ago',
     unread: 0,
+    photo: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200',
   },
   {
     id: 'c4',
@@ -112,6 +117,7 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     lastMessage: 'Joint deal possible on Park View plot?',
     time: 'Yesterday',
     unread: 0,
+    photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200',
   },
   {
     id: 'c5',
@@ -121,6 +127,7 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     lastMessage: 'Sent you the commercial brochure.',
     time: 'Monday',
     unread: 0,
+    photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200',
   },
 ];
 
@@ -149,6 +156,7 @@ export const MOCK_FRIEND_REQUESTS: FriendRequest[] = [
     agency: 'Siddiqui Properties',
     city: 'Lahore',
     mutualFriends: 4,
+    photo: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200',
   },
   {
     id: 'fr2',
@@ -157,5 +165,6 @@ export const MOCK_FRIEND_REQUESTS: FriendRequest[] = [
     agency: 'Hussain Realty',
     city: 'Islamabad',
     mutualFriends: 2,
+    photo: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200',
   },
 ];

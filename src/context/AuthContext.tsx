@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { UserRole } from '../types';
+import React, { createContext, useContext } from 'react';
+import { useAuthStore } from '@/store/authStore';
+import { UserRole } from '@/types';
 
 interface AuthContextType {
   isLoggedIn: boolean;
@@ -12,26 +13,48 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [role, setRole] = useState<UserRole>('guest');
+  const { user, setUser, isAuthenticated, isLoading } = useAuthStore();
 
-  const login = useCallback(async (mobile: string, password: string) => {
-    const normalized = mobile.replace(/\D/g, '');
-    if (normalized.length >= 10 && password.length >= 4) {
-      setIsLoggedIn(true);
-      setRole('verified_agent');
-      return true;
+  const login = async (mobile: string, password: string) => {
+    // Mock login - TODO: integrate with Firebase
+    const mockUser = {
+      id: 'user-1',
+      name: 'Test User',
+      mobile,
+      role: 'verified_agent' as UserRole,
+      agency: 'Test Agency',
+      city: 'Rawalpindi',
+      expertiseAreas: ['Bahria Town', 'DHA'],
+    };
+    setUser(mockUser);
+    return true;
+  };
+
+  const logout = () => {
+    setUser(null);
+  };
+
+  const setRole = (role: UserRole) => {
+    if (user) {
+      setUser({ ...user, role });
     }
-    return false;
-  }, []);
+  };
 
-  const logout = useCallback(() => {
-    setIsLoggedIn(false);
-    setRole('guest');
-  }, []);
+  // Show loading state while rehydrating from AsyncStorage
+  if (isLoading) {
+    return null; // Or show a loading spinner
+  }
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, role, login, logout, setRole }}>
+    <AuthContext.Provider
+      value={{
+        isLoggedIn: isAuthenticated,
+        role: user?.role || 'guest',
+        login,
+        logout,
+        setRole,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
