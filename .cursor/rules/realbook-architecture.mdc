@@ -1,0 +1,43 @@
+# Realbook Architecture Rules
+
+## Core Philosophy
+- Fastest stable MVP
+- One feature at a time
+- No overengineering
+- Maintainable by future developers
+
+## State Management
+- Use React Context only
+- No Zustand
+- No Redux
+- Local UI state stays local
+
+## Services
+- Screens never call Firebase directly
+- All backend calls go through /src/services
+- Keep services backend-agnostic
+
+## Backend
+- Firebase later
+- AsyncStorage for MVP persistence
+- Firestore structure must stay scalable
+
+## Roles
+- guest
+- pending_agent
+- verified_agent
+- admin
+- banned
+
+## Product Rules
+- Sale listings only
+- No rentals in Phase 1
+- Requirements not demands
+- Record Room data never truly deleted
+- CNIC admin-only
+- Visiting card public
+
+## Performance
+- FlatList only for feeds
+- Pagination required
+- Optimize for Android mid-range phones
