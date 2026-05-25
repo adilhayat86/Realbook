@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import { MOCK_AGENTS, MOCK_LISTINGS, MOCK_USER } from '../data/mockData';
 import { Agent, Listing, PostFormData, Requirement, SearchFilters, UserProfile } from '../types';
 import { FeedListing, getRankedFeedListings } from '../utils/feedRanking';
+import { useAuth } from './AuthContext';
+import { canCreateRequirements, canFollowAgents, canPostListings } from '../utils/permissions';
 
 interface AppContextType {
   listings: Listing[];
@@ -19,6 +21,7 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const { role } = useAuth();
   const [listings, setListings] = useState<Listing[]>(MOCK_LISTINGS);
   const [agents, setAgents] = useState<Agent[]>(MOCK_AGENTS);
   const [profile, setProfile] = useState<UserProfile>(MOCK_USER);
@@ -26,6 +29,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addListing = useCallback(
     (data: PostFormData) => {
+      if (!canPostListings(role)) return;
+
       const newListing: Listing = {
         id: `l${Date.now()}`,
         agentId: profile.id,
@@ -55,23 +60,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       };
       setListings((prev) => [newListing, ...prev]);
     },
-    [profile]
+    [profile, role]
   );
 
   const addRequirement = useCallback(
     (requirement: Requirement) => {
+      if (!canCreateRequirements(role)) return;
       setRequirements((prev) => [requirement, ...prev]);
     },
-    []
+    [role]
   );
 
-  const toggleFollow = useCallback((agentId: string) => {
-    setAgents((prev) =>
-      prev.map((a) =>
-        a.id === agentId ? { ...a, isFollowing: !a.isFollowing } : a
-      )
-    );
-  }, []);
+  const toggleFollow = useCallback(
+    (agentId: string) => {
+      if (!canFollowAgents(role)) return;
+
+      setAgents((prev) =>
+        prev.map((a) =>
+          a.id === agentId ? { ...a, isFollowing: !a.isFollowing } : a
+        )
+      );
+    },
+    [role]
+  );
 
   const updateProfile = useCallback((updates: Partial<UserProfile>) => {
     setProfile((prev) => ({ ...prev, ...updates }));
