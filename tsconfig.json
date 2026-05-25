@@ -13,7 +13,6 @@
       "@/constants/*": ["src/constants/*"],
       "@/theme/*": ["src/theme/*"],
       "@/firebase/*": ["src/firebase/*"],
-      "@/store/*": ["src/store/*"],
       "@/navigation/*": ["src/navigation/*"],
       "@/context/*": ["src/context/*"],
       "@/data/*": ["src/data/*"]
