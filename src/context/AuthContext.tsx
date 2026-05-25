@@ -17,12 +17,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (mobile: string, password: string) => {
     // Mock login - TODO: integrate with Firebase
+    const isDemoAdmin = mobile === '03000000000';
     const mockUser = {
       id: 'user-1',
-      name: 'Test User',
+      name: isDemoAdmin ? 'Admin User' : 'Test User',
       mobile,
-      role: 'verified_agent' as UserRole,
-      agency: 'Test Agency',
+      role: (isDemoAdmin ? 'admin' : 'verified_agent') as UserRole,
+      agency: isDemoAdmin ? 'DealerTribe Admin' : 'Test Agency',
       city: 'Rawalpindi',
       expertiseAreas: ['Bahria Town', 'DHA'],
     };

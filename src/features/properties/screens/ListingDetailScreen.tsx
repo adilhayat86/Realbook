@@ -173,15 +173,30 @@ export function ListingDetailScreen({ navigation, route }: Props) {
           <View style={styles.divider} />
 
           <View style={styles.statsRow}>
-            <View style={styles.stat}>
+            <Pressable
+              style={styles.stat}
+              onPress={() =>
+                (navigation as any).navigate('Comments', { listingId: listing.id })
+              }
+            >
               <Ionicons name="chatbubble-outline" size={20} color={colors.primary} />
               <Text style={styles.statText}>{listing.commentCount} Comments</Text>
-            </View>
+            </Pressable>
             <View style={styles.stat}>
               <Ionicons name="pricetag-outline" size={20} color={colors.primary} />
               <Text style={styles.statText}>{listing.offerCount} Offers</Text>
             </View>
           </View>
+
+          <Pressable
+            style={styles.commentsButton}
+            onPress={() =>
+              (navigation as any).navigate('Comments', { listingId: listing.id })
+            }
+          >
+            <Ionicons name="chatbubble-outline" size={18} color="#fff" />
+            <Text style={styles.commentsButtonText}>Open Comments</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </View>
@@ -368,5 +383,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text,
     fontWeight: '600',
+  },
+  commentsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingVertical: 12,
+    marginTop: 16,
+  },
+  commentsButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Switch, Text, View, Pressable } from 'react-nat
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { BackHeader } from '@/components/BackHeader';
+import { useAuth } from '@/context/AuthContext';
 import { FeedStackParamList } from '@/navigation/types';
 import { colors } from '@/theme/colors';
 
@@ -36,6 +37,7 @@ function SettingRow({
 }
 
 export function SettingsScreen({ navigation }: Props) {
+  const { role } = useAuth();
   const [pushNotif, setPushNotif] = useState(true);
   const [listingAlerts, setListingAlerts] = useState(true);
   const [messageNotif, setMessageNotif] = useState(true);
@@ -76,16 +78,18 @@ export function SettingsScreen({ navigation }: Props) {
 
         <Text style={styles.group}>App</Text>
         <View style={styles.card}>
-          <Pressable
-            style={styles.actionRow}
-            onPress={() => navigation.navigate('Admin')}
-          >
-            <View style={styles.rowText}>
-              <Text style={styles.rowLabel}>Admin Panel</Text>
-              <Text style={styles.rowSub}>Manage platform</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-          </Pressable>
+          {role === 'admin' ? (
+            <Pressable
+              style={styles.actionRow}
+              onPress={() => navigation.navigate('Admin')}
+            >
+              <View style={styles.rowText}>
+                <Text style={styles.rowLabel}>Admin Panel</Text>
+                <Text style={styles.rowSub}>Manage platform</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+            </Pressable>
+          ) : null}
           <View style={styles.infoRow}>
             <Text style={styles.rowLabel}>Version</Text>
             <Text style={styles.version}>1.0.0</Text>

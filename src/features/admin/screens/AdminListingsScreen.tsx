@@ -1,21 +1,36 @@
 import React from 'react';
 import {
   FlatList,
+  Pressable,
   StyleSheet,
   Text,
-  View,
-  Pressable,
   TextInput,
+  View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BackHeader } from '@/components/BackHeader';
 import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { formatPrice } from '@/data/mockData';
 import { colors } from '@/theme/colors';
+import { Listing } from '@/types';
 
 export function AdminListingsScreen({ navigation }: any) {
-  const { listings } = useApp();
+  const { listings, removeListing } = useApp();
+  const { role } = useAuth();
   const [searchText, setSearchText] = React.useState('');
+
+  if (role !== 'admin') {
+    return (
+      <View style={styles.container}>
+        <BackHeader title="Manage Listings" onBack={() => navigation.goBack()} />
+        <View style={styles.denied}>
+          <Ionicons name="lock-closed-outline" size={48} color={colors.textMuted} />
+          <Text style={styles.deniedTitle}>Admin access only</Text>
+        </View>
+      </View>
+    );
+  }
 
   const filteredListings = listings.filter((listing) =>
     listing.propertyType.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -23,23 +38,33 @@ export function AdminListingsScreen({ navigation }: any) {
     listing.society.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  const ListingRow = ({ listing }: { listing: any }) => (
+  const ListingRow = ({ listing }: { listing: Listing }) => (
     <View style={styles.listingRow}>
       <View style={styles.listingInfo}>
         <Text style={styles.listingType}>{listing.propertyType}</Text>
         <Text style={styles.listingPrice}>{formatPrice(listing.price)}</Text>
-        <Text style={styles.listingLocation}>{listing.city} · {listing.society}</Text>
+        <Text style={styles.listingLocation}>{listing.city} - {listing.society}</Text>
         <View style={styles.listingMeta}>
           <Text style={styles.metaText}>{listing.commentCount} comments</Text>
-          <Text style={styles.metaText}>·</Text>
+          <Text style={styles.metaText}>-</Text>
           <Text style={styles.metaText}>{listing.offerCount} offers</Text>
         </View>
       </View>
       <View style={styles.listingActions}>
-        <Pressable style={styles.actionBtn} onPress={() => console.log('View listing', listing.id)}>
+        <Pressable
+          style={styles.actionBtn}
+          onPress={() => navigation.navigate('ListingDetail', { listingId: listing.id })}
+          accessibilityRole="button"
+          accessibilityLabel={`View listing ${listing.id}`}
+        >
           <Ionicons name="eye-outline" size={20} color={colors.primary} />
         </Pressable>
-        <Pressable style={styles.actionBtn} onPress={() => console.log('Delete listing', listing.id)}>
+        <Pressable
+          style={styles.actionBtn}
+          onPress={() => removeListing(listing.id)}
+          accessibilityRole="button"
+          accessibilityLabel={`Remove listing ${listing.id}`}
+        >
           <Ionicons name="trash-outline" size={20} color="#EF4444" />
         </Pressable>
       </View>
@@ -61,7 +86,7 @@ export function AdminListingsScreen({ navigation }: any) {
       </View>
       <View style={styles.statsRow}>
         <Text style={styles.statText}>{filteredListings.length} Listings</Text>
-        <Pressable style={styles.addBtn}>
+        <Pressable style={styles.addBtn} onPress={() => navigation.getParent()?.navigate('Post')}>
           <Ionicons name="add" size={20} color="#fff" />
           <Text style={styles.addBtnText}>Add Listing</Text>
         </Pressable>
@@ -183,5 +208,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
+  },
+  denied: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+  },
+  deniedTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: 16,
   },
 });

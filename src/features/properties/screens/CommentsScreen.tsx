@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   FlatList,
+  Platform,
   StyleSheet,
   Text,
   View,
   TextInput,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -18,16 +17,20 @@ import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
 import { FeedStackParamList, ProfileStackParamList } from '@/navigation/types';
 import { colors } from '@/theme/colors';
+import { VirtualKeyboard } from '@/components/VirtualKeyboard';
 
 type Props = NativeStackScreenProps<FeedStackParamList, 'Comments'> | NativeStackScreenProps<ProfileStackParamList, 'Comments'>;
 
 export function CommentsScreen({ navigation, route }: Props) {
-  const { listings, profile, agents } = useApp();
+  const { listings, commentsByListing, addComment, agents } = useApp();
   const { role } = useAuth();
   const nav = useNavigation();
   const { listingId } = route.params;
   const listing = listings.find((l) => l.id === listingId);
   const [commentText, setCommentText] = useState('');
+  const [error, setError] = useState('');
+  const [showKeyboard, setShowKeyboard] = useState(false);
+  const comments = commentsByListing[listingId] ?? [];
 
   if (!listing) {
     return (
@@ -40,32 +43,29 @@ export function CommentsScreen({ navigation, route }: Props) {
     );
   }
 
-  // Mock comments data
-  const [comments, setComments] = useState([
-    { id: '1', author: 'Sara Malik', text: 'Great property! Is the price negotiable?', time: '2h ago' },
-    { id: '2', author: 'Usman Ali', text: 'I\'m interested in this property. Can we schedule a viewing?', time: '5h ago' },
-    { id: '3', author: 'Fatima Raza', text: 'The location is excellent. What\'s the possession status?', time: '1d ago' },
-  ]);
-
   const handleSendComment = () => {
-    if (role === 'guest') {
-      Alert.alert('Login Required', 'Please login to post comments.');
+    if (role === 'guest' || role === 'pending_agent' || role === 'banned') {
+      setError(
+        role === 'guest'
+          ? 'Login required to post comments.'
+          : role === 'pending_agent'
+            ? 'Admin approval required to post comments.'
+            : 'This account cannot post comments right now.'
+      );
       return;
     }
-    if (commentText.trim()) {
-      const newComment = {
-        id: Date.now().toString(),
-        author: profile.name,
-        text: commentText.trim(),
-        time: 'Just now',
-      };
-      setComments([newComment, ...comments]);
-      setCommentText('');
+    const text = commentText.trim();
+    if (!text) {
+      setError('Write a comment first.');
+      return;
     }
+    addComment(listingId, text);
+    setCommentText('');
+    setError('');
   };
 
   const renderComment = ({ item }: { item: typeof comments[0] }) => {
-    const agent = agents.find((a) => a.name === item.author);
+    const agent = agents.find((a) => a.id === item.authorId || a.name === item.author);
 
     const handleAgentPress = () => {
       if (agent) {
@@ -98,7 +98,9 @@ export function CommentsScreen({ navigation, route }: Props) {
     >
       <BackHeader title="Comments" onBack={() => navigation.goBack()} />
       <View style={styles.header}>
-        <Text style={styles.commentCount}>{listing.commentCount} Comments</Text>
+        <Text style={styles.commentCount}>
+          {listing.commentCount} Comment{listing.commentCount !== 1 ? 's' : ''}
+        </Text>
       </View>
       <FlatList
         data={comments}
@@ -106,18 +108,49 @@ export function CommentsScreen({ navigation, route }: Props) {
         keyExtractor={(item) => item.id}
         style={styles.list}
         contentContainerStyle={styles.listContent}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>No comments yet. Start the discussion.</Text>
+        }
       />
       <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Add a comment..."
-          placeholderTextColor={colors.textMuted}
-          value={commentText}
-          onChangeText={setCommentText}
-        />
-        <Pressable onPress={handleSendComment} hitSlop={10}>
-          <Ionicons name="send" size={24} color={colors.primary} />
-        </Pressable>
+        {error ? <Text style={styles.inputError}>{error}</Text> : null}
+        <View style={styles.inputRow}>
+          <TextInput
+            style={styles.input}
+            placeholder="Add a comment..."
+            placeholderTextColor={colors.textMuted}
+            value={commentText}
+            onChangeText={setCommentText}
+            onSubmitEditing={handleSendComment}
+            returnKeyType="send"
+          />
+          {Platform.OS === 'web' ? (
+            <Pressable
+              style={styles.keyboardButton}
+              onPress={() => setShowKeyboard((visible) => !visible)}
+              accessibilityRole="button"
+              accessibilityLabel="Open comment keyboard"
+            >
+              <Ionicons name="keypad-outline" size={20} color={colors.primary} />
+            </Pressable>
+          ) : null}
+          <Pressable
+            style={styles.sendButton}
+            onPress={handleSendComment}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Send comment"
+          >
+            <Ionicons name="send" size={24} color={colors.primary} />
+          </Pressable>
+        </View>
+        {Platform.OS === 'web' && showKeyboard ? (
+          <VirtualKeyboard
+            value={commentText}
+            onChangeText={setCommentText}
+            onDone={() => setShowKeyboard(false)}
+          />
+        ) : null}
       </View>
     </KeyboardAvoidingView>
   );
@@ -153,6 +186,13 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
+    flexGrow: 1,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: colors.textMuted,
+    marginTop: 32,
+    fontSize: 14,
   },
   commentItem: {
     flexDirection: 'row',
@@ -198,18 +238,42 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: colors.surface,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
+  inputRow: {
+    position: 'relative',
+  },
+  inputError: {
+    color: colors.error,
+    fontSize: 12,
+    marginBottom: 8,
+  },
   input: {
-    flex: 1,
     fontSize: 14,
     color: colors.text,
-    marginRight: 12,
+    marginRight: 84,
+    minHeight: 34,
+  },
+  keyboardButton: {
+    position: 'absolute',
+    right: 42,
+    bottom: 0,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.inputBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
+  sendButton: {
+    position: 'absolute',
+    right: 0,
+    bottom: 5,
   },
 });

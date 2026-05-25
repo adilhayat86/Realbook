@@ -79,6 +79,22 @@ export function LoginScreen() {
     }
   };
 
+  const handleAdminDemoLogin = async () => {
+    setError('');
+    setLoading(true);
+    const adminMobile = '03000000000';
+    const adminPassword = '';
+    const ok = await login(adminMobile, adminPassword);
+    setLoading(false);
+    if (ok) {
+      setMobile(adminMobile);
+      setPassword(adminPassword);
+      await saveCredentials(adminMobile, adminPassword);
+    } else {
+      setError('Could not open admin demo account.');
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -130,6 +146,14 @@ export function LoginScreen() {
         </View>
 
         <Button title="Login" onPress={handleLogin} loading={loading} />
+
+        <Button
+          title="Admin Demo Login"
+          onPress={handleAdminDemoLogin}
+          loading={loading}
+          variant="secondary"
+          style={styles.adminBtn}
+        />
 
         <Pressable onPress={() => navigation.navigate('SignUp' as never)} style={styles.signupLink}>
           <Text style={styles.signupLinkText}>
@@ -228,6 +252,9 @@ const styles = StyleSheet.create({
   signupLink: {
     marginTop: 16,
     alignSelf: 'center',
+  },
+  adminBtn: {
+    marginTop: 12,
   },
   signupLinkText: {
     fontSize: 14,

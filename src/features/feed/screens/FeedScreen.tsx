@@ -8,10 +8,12 @@ import { RequirementCard } from '@/features/feed/components/RequirementCard';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { ListingCardSkeleton } from '@/components/SkeletonLoader';
 import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/theme/colors';
 
 export function FeedScreen() {
   const { feedListings, requirements } = useApp();
+  const { role } = useAuth();
   const navigation = useNavigation();
   const [mode, setMode] = useState<'list' | 'swipe'>('list');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -91,6 +93,11 @@ export function FeedScreen() {
             <Pressable onPress={() => navigation.navigate('Requirements' as never)}>
               <Ionicons name="add-circle-outline" size={24} color="#fff" />
             </Pressable>
+            {role === 'admin' ? (
+              <Pressable onPress={() => navigation.navigate('Admin' as never)}>
+                <Ionicons name="shield-checkmark-outline" size={24} color="#fff" />
+              </Pressable>
+            ) : null}
           </View>
         }
       />

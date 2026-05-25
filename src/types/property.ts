@@ -44,6 +44,8 @@ export type DuesStatus = 'All Dues Clear' | 'Dues Pending';
 
 export type NOCStatus = 'NOC Available' | 'NOC Not Available';
 
+export type ListingStatus = 'active' | 'archive' | 'sold' | 'record_room';
+
 export interface Listing {
   id: string;
   agentId: string;
@@ -70,6 +72,11 @@ export interface Listing {
   commentCount: number;
   offerCount: number;
   images?: string[];
+  status?: ListingStatus;
+  lastRefreshedAt?: string;
+  lastReviewedAt?: string;
+  archivedAt?: string;
+  archivedReason?: string;
   // Property-specific fields
   level?: string;
   facing?: string;

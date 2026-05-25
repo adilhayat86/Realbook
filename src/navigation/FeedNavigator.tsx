@@ -22,13 +22,19 @@ import { AdminReportsScreen } from '@/features/admin/screens/AdminReportsScreen'
 import { RequirementsScreen } from '@/features/properties/screens/RequirementsScreen';
 import { MonthlyReviewScreen } from '@/features/feed/screens/MonthlyReviewScreen';
 import { RecordRoomScreen } from '@/features/properties/screens/RecordRoomScreen';
+import { useAuth } from '@/context/AuthContext';
 import { FeedStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<FeedStackParamList>();
 
 export function FeedNavigator() {
+  const { role } = useAuth();
+
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator
+      initialRouteName={role === 'admin' ? 'Admin' : 'FeedMain'}
+      screenOptions={{ headerShown: false }}
+    >
       <Stack.Screen name="FeedMain" component={FeedScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="Messages" component={MessagesScreen} />

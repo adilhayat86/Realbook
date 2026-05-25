@@ -66,13 +66,36 @@ export function RequirementsScreen() {
   const navigation = useNavigation();
   const [form, setForm] = useState<RequirementFormData>(initialForm);
 
-  // Guests cannot post requirements
-  if (role === 'guest') {
+  const cannotPost = role === 'guest' || role === 'pending_agent' || role === 'banned';
+
+  if (cannotPost) {
+    const blockedCopy =
+      role === 'guest'
+        ? {
+            subtitle: 'Login required',
+            title: 'Login Required',
+            text: 'You must be logged in to post a requirement.',
+            button: 'Go to Login',
+          }
+        : role === 'pending_agent'
+          ? {
+              subtitle: 'Approval required',
+              title: 'Pending Approval',
+              text: 'Admin must approve your dealer profile before you can post requirements.',
+              button: 'Go Back',
+            }
+          : {
+              subtitle: 'Account restricted',
+              title: 'Posting Disabled',
+              text: 'This account cannot post requirements right now.',
+              button: 'Go Back',
+            };
+
     return (
       <View style={styles.container}>
         <ScreenHeader
           title="Post Requirement"
-          subtitle="Login required"
+          subtitle={blockedCopy.subtitle}
           left={
             <Pressable onPress={() => navigation.goBack()}>
               <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -81,13 +104,15 @@ export function RequirementsScreen() {
         />
         <View style={styles.guestContainer}>
           <Ionicons name="lock-closed" size={64} color={colors.textMuted} />
-          <Text style={styles.guestTitle}>Login Required</Text>
+          <Text style={styles.guestTitle}>{blockedCopy.title}</Text>
           <Text style={styles.guestText}>
-            You must be logged in to post a requirement.
+            {blockedCopy.text}
           </Text>
           <Button
-            title="Go to Login"
-            onPress={() => nav.navigate('Login')}
+            title={blockedCopy.button}
+            onPress={() =>
+              role === 'guest' ? nav.navigate('Login') : navigation.goBack()
+            }
             style={styles.guestBtn}
           />
         </View>

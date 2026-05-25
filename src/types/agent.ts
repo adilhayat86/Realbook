@@ -6,7 +6,15 @@ export interface Agent {
   city: string;
   listingsCount: number;
   isFollowing: boolean;
+  status?: 'pending' | 'active' | 'banned' | 'rejected';
   photo?: string;
+  officeAddress?: string;
+  visitingCardFront?: string;
+  visitingCardBack?: string;
+  cnicFront?: string;
+  cnicBack?: string;
+  submittedAt?: string;
+  reviewedAt?: string;
 }
 
 export interface Requirement {

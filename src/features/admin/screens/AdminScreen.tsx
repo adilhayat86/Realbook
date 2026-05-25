@@ -9,16 +9,37 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { BackHeader } from '@/components/BackHeader';
 import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/theme/colors';
 
 export function AdminScreen({ navigation }: any) {
-  const { listings, agents, profile } = useApp();
+  const { listings, agents } = useApp();
+  const { role } = useAuth();
+
+  if (role !== 'admin') {
+    return (
+      <View style={styles.container}>
+        <BackHeader title="Admin Panel" onBack={() => navigation.goBack()} />
+        <View style={styles.denied}>
+          <Ionicons name="lock-closed-outline" size={48} color={colors.textMuted} />
+          <Text style={styles.deniedTitle}>Admin access only</Text>
+          <Text style={styles.deniedText}>
+            This area is restricted to platform admins.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  const pendingAgents = agents.filter((agent) => agent.status === 'pending');
+  const activeAgents = agents.filter((agent) => !agent.status || agent.status === 'active');
+  const bannedAgents = agents.filter((agent) => agent.status === 'banned');
 
   const stats = [
     { label: 'Total Listings', value: listings.length, icon: 'home-outline', color: colors.primary },
-    { label: 'Total Agents', value: agents.length, icon: 'people-outline', color: '#10B981' },
-    { label: 'Total Comments', value: listings.reduce((sum, l) => sum + l.commentCount, 0), icon: 'chatbubble-outline', color: '#F59E0B' },
-    { label: 'Total Offers', value: listings.reduce((sum, l) => sum + l.offerCount, 0), icon: 'pricetag-outline', color: '#8B5CF6' },
+    { label: 'Approved Agents', value: activeAgents.length, icon: 'people-outline', color: '#10B981' },
+    { label: 'Pending Review', value: pendingAgents.length, icon: 'time-outline', color: '#F59E0B' },
+    { label: 'Banned Agents', value: bannedAgents.length, icon: 'ban-outline', color: '#EF4444' },
   ];
 
   const menuItems = [
@@ -80,8 +101,10 @@ export function AdminScreen({ navigation }: any) {
               <Ionicons name="person-add-outline" size={20} color={colors.primary} />
             </View>
             <View style={styles.activityContent}>
-              <Text style={styles.activityText}>New agent registered</Text>
-              <Text style={styles.activityTime}>2 hours ago</Text>
+              <Text style={styles.activityText}>
+                {pendingAgents.length} agent{pendingAgents.length !== 1 ? 's' : ''} awaiting approval
+              </Text>
+              <Text style={styles.activityTime}>Review CNIC and visiting card</Text>
             </View>
           </View>
           <View style={styles.activityItem}>
@@ -221,5 +244,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textMuted,
     marginTop: 2,
+  },
+  denied: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+  },
+  deniedTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: 16,
+  },
+  deniedText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 8,
   },
 });

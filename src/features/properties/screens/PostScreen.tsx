@@ -1,6 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -110,15 +109,48 @@ export function PostScreen() {
   const { role } = useAuth();
   const navigation = useNavigation();
   const [form, setForm] = useState<PostFormData>(initialForm);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [formError, setFormError] = useState('');
+  const [isPosting, setIsPosting] = useState(false);
 
-  // Guests cannot post listings
-  if (role === 'guest') {
+  const requiredFields: Array<[keyof PostFormData, string]> = [
+    ['propertyType', 'property type'],
+    ['size', 'size'],
+    ['city', 'city'],
+    ['society', 'society'],
+    ['phase', 'phase / sector'],
+    ['price', 'price'],
+  ];
+
+  const cannotPost = role === 'guest' || role === 'pending_agent' || role === 'banned';
+
+  if (cannotPost) {
+    const blockedCopy =
+      role === 'guest'
+        ? {
+            subtitle: 'Login required',
+            title: 'Login Required',
+            text: 'You must be logged in to post a listing.',
+            button: 'Go to Login',
+          }
+        : role === 'pending_agent'
+          ? {
+              subtitle: 'Approval required',
+              title: 'Pending Approval',
+              text: 'Admin must approve your dealer profile before you can post listings.',
+              button: 'Back to Feed',
+            }
+          : {
+              subtitle: 'Account restricted',
+              title: 'Posting Disabled',
+              text: 'This account cannot post listings right now.',
+              button: 'Back to Feed',
+            };
+
     return (
       <View style={styles.container}>
         <ScreenHeader
           title="Post Listing"
-          subtitle="Login required"
+          subtitle={blockedCopy.subtitle}
           left={
             <Pressable onPress={() => navigation.goBack()}>
               <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -127,13 +159,17 @@ export function PostScreen() {
         />
         <View style={styles.guestContainer}>
           <Ionicons name="lock-closed" size={64} color={colors.textMuted} />
-          <Text style={styles.guestTitle}>Login Required</Text>
+          <Text style={styles.guestTitle}>{blockedCopy.title}</Text>
           <Text style={styles.guestText}>
-            You must be logged in to post a listing.
+            {blockedCopy.text}
           </Text>
           <Button
-            title="Go to Login"
-            onPress={() => navigation.navigate('Login' as never)}
+            title={blockedCopy.button}
+            onPress={() =>
+              role === 'guest'
+                ? navigation.navigate('Login' as never)
+                : (navigation as any).navigate('Feed')
+            }
             style={styles.guestBtn}
           />
         </View>
@@ -194,16 +230,21 @@ export function PostScreen() {
   };
 
   const handlePost = () => {
+    const missing = requiredFields.find(([field]) => !form[field]);
+    if (missing) {
+      setFormError(`Please add ${missing[1]} before posting.`);
+      return;
+    }
+
+    setFormError('');
+    setIsPosting(true);
     addListing(form);
-    Alert.alert('Posted!', 'Your listing is now live on the feed.', [
-      {
-        text: 'OK',
-        onPress: () => {
-          setForm(initialForm);
-          navigation.goBack();
-        },
-      },
-    ]);
+    setForm(initialForm);
+
+    setTimeout(() => {
+      setIsPosting(false);
+      (navigation as any).navigate('Feed');
+    }, 250);
   };
 
   return (
@@ -665,9 +706,11 @@ export function PostScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
+        {formError ? <Text style={styles.formError}>{formError}</Text> : null}
         <Button
-          title="Post Listing"
+          title={isPosting ? 'Posting...' : 'Post Listing'}
           onPress={handlePost}
+          loading={isPosting}
           disabled={!form.propertyType || !form.size || !form.city || !form.society || !form.phase || !form.price}
           style={styles.postBtn}
         />
@@ -832,6 +875,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
+  },
+  formError: {
+    color: colors.error,
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 10,
+    textAlign: 'center',
   },
   postBtn: {
     flex: 1,
