@@ -1,22 +1,13 @@
 import React, { createContext, useContext, useMemo, useState } from 'react';
 import { UserRole } from '@/types';
-
-interface AuthUser {
-  id: string;
-  name: string;
-  mobile: string;
-  role: UserRole;
-  agency?: string;
-  city?: string;
-  expertiseAreas?: string[];
-}
+import { AuthUser, loginWithMobile, logoutUser } from '@/services/authService';
 
 interface AuthContextType {
   isLoggedIn: boolean;
   role: UserRole;
   user: AuthUser | null;
   login: (mobile: string, passcode: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   setRole: (role: UserRole) => void;
 }
 
@@ -26,24 +17,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
 
   const login = async (mobile: string, passcode: string) => {
-    if (!mobile.trim() || !passcode.trim()) {
-      return false;
-    }
+    const authenticatedUser = await loginWithMobile(mobile, passcode);
+    if (!authenticatedUser) return false;
 
-    setUser({
-      id: 'user-1',
-      name: 'Test User',
-      mobile: mobile.trim(),
-      role: 'verified_agent',
-      agency: 'Test Agency',
-      city: 'Rawalpindi',
-      expertiseAreas: ['Bahria Town', 'DHA'],
-    });
-
+    setUser(authenticatedUser);
     return true;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await logoutUser();
     setUser(null);
   };
 
