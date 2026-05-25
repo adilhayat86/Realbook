@@ -27,6 +27,10 @@ export function ProfileScreen({ navigation, route }: Props) {
   const isOwnProfile = !agentId || agentId === profile.id;
   const viewedProfile = isOwnProfile ? profile : agents.find((a) => a.id === agentId) || profile;
 
+  const handleLogout = () => {
+    void logout();
+  };
+
   if (!viewedProfile) {
     return (
       <View style={styles.container}>
@@ -108,7 +112,7 @@ export function ProfileScreen({ navigation, route }: Props) {
               </View>
             </View>
             {isOwnProfile && (
-              <Pressable style={styles.logoutBtn} onPress={logout}>
+              <Pressable style={styles.logoutBtn} onPress={handleLogout}>
                 <Ionicons name="log-out-outline" size={16} color={colors.error} />
                 <Text style={styles.logoutText}>Logout</Text>
               </Pressable>
