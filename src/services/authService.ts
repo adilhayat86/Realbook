@@ -10,8 +10,16 @@ export interface AuthUser {
   expertiseAreas?: string[];
 }
 
+function isValidMobile(mobile: string) {
+  return mobile.replace(/\D/g, '').length >= 10;
+}
+
+function isValidPasscode(passcode: string) {
+  return passcode.trim().length >= 4;
+}
+
 export async function loginWithMobile(mobile: string, passcode: string): Promise<AuthUser | null> {
-  if (!mobile.trim() || !passcode.trim()) {
+  if (!isValidMobile(mobile) || !isValidPasscode(passcode)) {
     return null;
   }
 
