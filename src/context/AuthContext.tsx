@@ -1,11 +1,21 @@
-import React, { createContext, useContext } from 'react';
-import { useAuthStore } from '@/store/authStore';
+import React, { createContext, useContext, useMemo, useState } from 'react';
 import { UserRole } from '@/types';
+
+interface AuthUser {
+  id: string;
+  name: string;
+  mobile: string;
+  role: UserRole;
+  agency?: string;
+  city?: string;
+  expertiseAreas?: string[];
+}
 
 interface AuthContextType {
   isLoggedIn: boolean;
   role: UserRole;
-  login: (mobile: string, password: string) => Promise<boolean>;
+  user: AuthUser | null;
+  login: (mobile: string, passcode: string) => Promise<boolean>;
   logout: () => void;
   setRole: (role: UserRole) => void;
 }
@@ -13,20 +23,23 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { user, setUser, isAuthenticated, isLoading } = useAuthStore();
+  const [user, setUser] = useState<AuthUser | null>(null);
 
-  const login = async (mobile: string, password: string) => {
-    // Mock login - TODO: integrate with Firebase
-    const mockUser = {
+  const login = async (mobile: string, passcode: string) => {
+    if (!mobile.trim() || !passcode.trim()) {
+      return false;
+    }
+
+    setUser({
       id: 'user-1',
       name: 'Test User',
-      mobile,
-      role: 'verified_agent' as UserRole,
+      mobile: mobile.trim(),
+      role: 'verified_agent',
       agency: 'Test Agency',
       city: 'Rawalpindi',
       expertiseAreas: ['Bahria Town', 'DHA'],
-    };
-    setUser(mockUser);
+    });
+
     return true;
   };
 
@@ -35,29 +48,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const setRole = (role: UserRole) => {
-    if (user) {
-      setUser({ ...user, role });
-    }
+    setUser((currentUser) => {
+      if (!currentUser) return currentUser;
+      return { ...currentUser, role };
+    });
   };
 
-  // Show loading state while rehydrating from AsyncStorage
-  if (isLoading) {
-    return null; // Or show a loading spinner
-  }
-
-  return (
-    <AuthContext.Provider
-      value={{
-        isLoggedIn: isAuthenticated,
-        role: user?.role || 'guest',
-        login,
-        logout,
-        setRole,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo<AuthContextType>(
+    () => ({
+      isLoggedIn: !!user,
+      role: user?.role || 'guest',
+      user,
+      login,
+      logout,
+      setRole,
+    }),
+    [user]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
