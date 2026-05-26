@@ -12,7 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/theme/colors';
 
 export function FeedScreen() {
-  const { feedListings, requirements } = useApp();
+  const { feedListings, requirements, refreshAppData } = useApp();
   const { role } = useAuth();
   const navigation = useNavigation();
   const [mode, setMode] = useState<'list' | 'swipe'>('list');
@@ -23,17 +23,18 @@ export function FeedScreen() {
   const swipePosition = useRef(new Animated.ValueXY()).current;
   const itemsPerPage = 10;
 
-  // Combine listings and requirements for the feed
-  const feedData = [
-    ...requirements.map((r) => ({ ...r, type: 'requirement' as const })),
-    ...feedListings.map((l) => ({ ...l, type: 'listing' as const })),
-  ].sort((a, b) => {
-    const dateA = new Date((a as any).createdAt || (a as any).publishedAt).getTime();
-    const dateB = new Date((b as any).createdAt || (b as any).publishedAt).getTime();
-    return dateB - dateA;
-  });
+  const feedData = useMemo(
+    () => [
+      ...requirements.map((r) => ({ ...r, type: 'requirement' as const })),
+      ...feedListings.map((l) => ({ ...l, type: 'listing' as const })),
+    ].sort((a, b) => {
+      const dateA = new Date((a as any).createdAt || (a as any).publishedAt).getTime();
+      const dateB = new Date((b as any).createdAt || (b as any).publishedAt).getTime();
+      return dateB - dateA;
+    }),
+    [feedListings, requirements]
+  );
 
-  // Paginated data
   const paginatedData = feedData.slice(0, page * itemsPerPage);
   const hasMore = page * itemsPerPage < feedData.length;
 
@@ -72,32 +73,30 @@ export function FeedScreen() {
   const panResponder = useMemo(
     () =>
       PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) =>
-        Math.abs(gestureState.dx) > 10 || Math.abs(gestureState.dy) > 10,
-      onPanResponderMove: Animated.event(
-        [null, { dx: swipePosition.x, dy: swipePosition.y }],
-        { useNativeDriver: false }
-      ),
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dx > 90 || gestureState.vx > 0.45) {
-          completeSwipe(1);
-          return;
-        }
-        if (gestureState.dx < -90 || gestureState.vx < -0.45) {
-          completeSwipe(-1);
-          return;
-        }
-        resetSwipePosition();
-      },
-    }),
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          Math.abs(gestureState.dx) > 10 || Math.abs(gestureState.dy) > 10,
+        onPanResponderMove: Animated.event(
+          [null, { dx: swipePosition.x, dy: swipePosition.y }],
+          { useNativeDriver: false }
+        ),
+        onPanResponderRelease: (_, gestureState) => {
+          if (gestureState.dx > 90 || gestureState.vx > 0.45) {
+            completeSwipe(1);
+            return;
+          }
+          if (gestureState.dx < -90 || gestureState.vx < -0.45) {
+            completeSwipe(-1);
+            return;
+          }
+          resetSwipePosition();
+        },
+      }),
     [completeSwipe, resetSwipePosition, swipePosition.x, swipePosition.y]
   );
 
   const handleSwipeLeft = () => completeSwipe(-1);
-
   const handleSwipeRight = () => completeSwipe(1);
 
-  // Reset index when switching modes
   const handleModeChange = (newMode: 'list' | 'swipe') => {
     setMode(newMode);
     setCurrentIndex(0);
@@ -107,21 +106,20 @@ export function FeedScreen() {
   const handleLoadMore = () => {
     if (loading) return;
     setLoading(true);
-    // Simulate loading more items
     setTimeout(() => {
-      setPage(prev => prev + 1);
+      setPage((prev) => prev + 1);
       setLoading(false);
     }, 500);
   };
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     setPage(1);
     setCurrentIndex(0);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
-  }, []);
+    swipePosition.setValue({ x: 0, y: 0 });
+    await refreshAppData();
+    setRefreshing(false);
+  }, [refreshAppData, swipePosition]);
 
   return (
     <View style={styles.container}>
