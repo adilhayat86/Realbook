@@ -79,28 +79,27 @@ export function RequirementCard({ requirement }: RequirementCardProps) {
         </Pressable>
 
         <View style={styles.requestBox}>
-          <Text style={styles.requestLabel}>Looking for</Text>
-          <Text style={styles.propertyType}>{requirement.propertyType}</Text>
-          <Text style={styles.location} numberOfLines={2}>
+          <Text style={styles.propertyType} numberOfLines={1}>{requirement.propertyType}</Text>
+          <Text style={styles.location} numberOfLines={1}>
             {requirement.city}{location ? ` · ${location}` : ''}
           </Text>
         </View>
 
         <View style={styles.infoGrid}>
           <View style={styles.infoPill}>
-            <Ionicons name="resize-outline" size={13} color={colors.textSecondary} />
+            <Ionicons name="resize-outline" size={12} color={colors.textSecondary} />
             <Text style={styles.infoText}>
               {requirement.size ? `${requirement.size} ${requirement.sizeUnit || ''}` : 'Any size'}
             </Text>
           </View>
           <View style={styles.infoPillWide}>
-            <Ionicons name="wallet-outline" size={13} color={colors.textSecondary} />
-            <Text style={styles.infoText}>{budgetText(requirement)}</Text>
+            <Ionicons name="wallet-outline" size={12} color={colors.textSecondary} />
+            <Text style={styles.infoText} numberOfLines={1}>{budgetText(requirement)}</Text>
           </View>
         </View>
 
         {requirement.description ? (
-          <Text style={styles.description} numberOfLines={2}>{requirement.description}</Text>
+          <Text style={styles.description} numberOfLines={1}>{requirement.description}</Text>
         ) : null}
 
         <View style={styles.footer}>
@@ -116,26 +115,26 @@ export default React.memo(RequirementCard);
 
 const styles = StyleSheet.create({
   cardWrap: {
-    marginHorizontal: 12,
-    marginVertical: 6,
+    marginHorizontal: 10,
+    marginVertical: 5,
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1.5,
+    borderRadius: 14,
+    padding: 9,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#E8D28A',
     shadowColor: colors.shadowDark,
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 1,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 6,
     gap: 8,
   },
   badgeRow: {
@@ -150,13 +149,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     backgroundColor: '#FFF7D6',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: 12,
   },
   typeText: {
     color: colors.primaryDark,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
@@ -165,25 +164,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 3,
     backgroundColor: colors.error,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: 12,
   },
   urgentText: {
     color: colors.white,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
   normalBadge: {
     backgroundColor: colors.gray100,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: 12,
   },
   normalText: {
     color: colors.textSecondary,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '900',
     textTransform: 'uppercase',
   },
@@ -194,67 +193,60 @@ const styles = StyleSheet.create({
   agentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 6,
   },
   agentRowPressed: {
     opacity: 0.7,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 9,
   },
   avatarText: {
     color: colors.white,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '900',
   },
   agentInfo: {
     flex: 1,
   },
   agentName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
     color: colors.text,
   },
   agency: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textSecondary,
     marginTop: 1,
   },
   requestBox: {
     backgroundColor: colors.gray50,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 9,
-  },
-  requestLabel: {
-    fontSize: 11,
-    color: colors.textMuted,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    marginBottom: 3,
+    borderRadius: 11,
+    padding: 7,
+    marginBottom: 5,
   },
   propertyType: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '900',
     color: colors.text,
   },
   location: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textSecondary,
     marginTop: 3,
-    lineHeight: 18,
   },
   infoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 7,
-    marginBottom: 8,
+    gap: 5,
+    marginTop: 5,
+    marginBottom: 0,
   },
   infoPill: {
     flexDirection: 'row',
@@ -262,8 +254,8 @@ const styles = StyleSheet.create({
     gap: 5,
     backgroundColor: colors.gray50,
     borderRadius: 10,
-    paddingHorizontal: 9,
-    paddingVertical: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
   },
   infoPillWide: {
     flexDirection: 'row',
@@ -271,9 +263,9 @@ const styles = StyleSheet.create({
     gap: 5,
     backgroundColor: colors.gray50,
     borderRadius: 10,
-    paddingHorizontal: 9,
-    paddingVertical: 6,
-    maxWidth: '100%',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    flexShrink: 1,
   },
   infoText: {
     fontSize: 11,
@@ -281,27 +273,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   description: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.text,
-    lineHeight: 18,
-    marginTop: 1,
+    marginTop: 0,
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 10,
-    paddingTop: 10,
+    marginTop: 6,
+    paddingTop: 6,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
   footerText: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textMuted,
     fontWeight: '700',
   },
   footerAction: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.primaryDark,
     fontWeight: '900',
   },
