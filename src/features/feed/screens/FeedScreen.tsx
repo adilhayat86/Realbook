@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { Pressable, FlatList, StyleSheet, Text, View, RefreshControl } from 'react-native';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
+import { Animated, PanResponder, Pressable, FlatList, StyleSheet, Text, View, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { FeedQuickBar } from '@/features/feed/components/FeedQuickBar';
@@ -20,6 +20,7 @@ export function FeedScreen() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const swipePosition = useRef(new Animated.ValueXY()).current;
   const itemsPerPage = 10;
 
   // Combine listings and requirements for the feed
@@ -36,22 +37,71 @@ export function FeedScreen() {
   const paginatedData = feedData.slice(0, page * itemsPerPage);
   const hasMore = page * itemsPerPage < feedData.length;
 
-  const handleSwipeLeft = () => {
-    if (currentIndex < feedData.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    }
-  };
+  const completeSwipe = useCallback(
+    (direction: -1 | 1) => {
+      if (currentIndex >= feedData.length) return;
 
-  const handleSwipeRight = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-    }
-  };
+      let didAdvance = false;
+      const advanceCard = () => {
+        if (didAdvance) return;
+        didAdvance = true;
+        swipePosition.setValue({ x: 0, y: 0 });
+        setCurrentIndex((prev) => Math.min(prev + 1, feedData.length));
+      };
+
+      Animated.timing(swipePosition, {
+        toValue: { x: direction * 520, y: 32 },
+        duration: 220,
+        useNativeDriver: true,
+      }).start(advanceCard);
+
+      setTimeout(advanceCard, 280);
+    },
+    [currentIndex, feedData.length, swipePosition]
+  );
+
+  const resetSwipePosition = useCallback(() => {
+    Animated.spring(swipePosition, {
+      toValue: { x: 0, y: 0 },
+      friction: 6,
+      tension: 70,
+      useNativeDriver: true,
+    }).start();
+  }, [swipePosition]);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) =>
+        Math.abs(gestureState.dx) > 10 || Math.abs(gestureState.dy) > 10,
+      onPanResponderMove: Animated.event(
+        [null, { dx: swipePosition.x, dy: swipePosition.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx > 90 || gestureState.vx > 0.45) {
+          completeSwipe(1);
+          return;
+        }
+        if (gestureState.dx < -90 || gestureState.vx < -0.45) {
+          completeSwipe(-1);
+          return;
+        }
+        resetSwipePosition();
+      },
+    }),
+    [completeSwipe, resetSwipePosition, swipePosition.x, swipePosition.y]
+  );
+
+  const handleSwipeLeft = () => completeSwipe(-1);
+
+  const handleSwipeRight = () => completeSwipe(1);
 
   // Reset index when switching modes
   const handleModeChange = (newMode: 'list' | 'swipe') => {
     setMode(newMode);
     setCurrentIndex(0);
+    swipePosition.setValue({ x: 0, y: 0 });
   };
 
   const handleLoadMore = () => {
@@ -193,35 +243,66 @@ export function FeedScreen() {
             </Text>
           ) : (
             <>
+              <Text style={styles.swipeCounter}>
+                {currentIndex + 1} of {feedData.length}
+              </Text>
               <View style={styles.cardStack}>
-                {feedData
-                  .slice(currentIndex, currentIndex + 3)
-                  .reverse()
-                  .map((item, index) => (
-                    <View
+                {feedData.slice(currentIndex, currentIndex + 3).map((item, index) => {
+                  const isTopCard = index === 0;
+                  const cardTransform = isTopCard
+                    ? [
+                        ...swipePosition.getTranslateTransform(),
+                        {
+                          rotate: swipePosition.x.interpolate({
+                            inputRange: [-220, 0, 220],
+                            outputRange: ['-10deg', '0deg', '10deg'],
+                          }),
+                        },
+                      ]
+                    : [{ scale: 1 - index * 0.05 }, { translateY: index * 10 }];
+                  const CardContainer = isTopCard ? Animated.View : View;
+
+                  return (
+                    <CardContainer
                       key={item.id}
+                      {...(isTopCard ? panResponder.panHandlers : {})}
                       style={[
                         styles.swipeCard,
                         {
-                          transform: [{ scale: 1 - index * 0.05 }],
+                          transform: cardTransform,
                           zIndex: 10 - index,
+                          opacity: 1 - index * 0.08,
                         },
                       ]}
+                      accessibilityLabel={isTopCard ? 'Swipe card' : undefined}
                     >
                       {item.type === 'requirement' ? (
                         <RequirementCard requirement={item} />
                       ) : (
                         <ListingCard listing={item} />
                       )}
-                    </View>
-                  ))}
+                    </CardContainer>
+                  );
+                })}
               </View>
               <View style={styles.swipeActions}>
-                <Pressable style={styles.swipeButtonLeft} onPress={handleSwipeLeft}>
+                <Pressable
+                  style={styles.swipeButtonLeft}
+                  onPress={handleSwipeLeft}
+                  accessibilityRole="button"
+                  accessibilityLabel="Pass card"
+                >
                   <Ionicons name="close" size={32} color={colors.error} />
+                  <Text style={styles.swipeActionText}>Pass</Text>
                 </Pressable>
-                <Pressable style={styles.swipeButtonRight} onPress={handleSwipeRight}>
+                <Pressable
+                  style={styles.swipeButtonRight}
+                  onPress={handleSwipeRight}
+                  accessibilityRole="button"
+                  accessibilityLabel="Interested in card"
+                >
                   <Ionicons name="heart" size={32} color={colors.primary} />
+                  <Text style={styles.swipeActionText}>Interested</Text>
                 </Pressable>
               </View>
             </>
@@ -292,7 +373,8 @@ const styles = StyleSheet.create({
   swipeContainer: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 14,
   },
   cardStack: {
     position: 'relative',
@@ -309,6 +391,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 40,
     marginTop: 20,
+  },
+  swipeCounter: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.textMuted,
+    marginBottom: 10,
   },
   swipeButtonLeft: {
     width: 64,
@@ -329,6 +417,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: colors.border,
+  },
+  swipeActionText: {
+    marginTop: 2,
+    fontSize: 10,
+    fontWeight: '800',
+    color: colors.textSecondary,
   },
   loadingMore: {
     paddingVertical: 16,
