@@ -39,6 +39,7 @@ interface AppContextType {
   commentsByListing: Record<string, ListingComment[]>;
   profile: UserProfile;
   isLoading: boolean;
+  refreshAppData: () => Promise<void>;
   addListing: (data: PostFormData) => void;
   removeListing: (listingId: string) => void;
   addRequirement: (requirement: Requirement) => void;
@@ -64,8 +65,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     useState<Record<string, ListingComment[]>>({});
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadAppData = useCallback(async () => {
-    setIsLoading(true);
+  const loadAppData = useCallback(async (showGlobalLoading = true) => {
+    if (showGlobalLoading) {
+      setIsLoading(true);
+    }
     try {
       const [
         storedListings,
@@ -73,14 +76,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         storedRequirements,
         storedComments,
         storedRecordRoomListings,
-      ] =
-        await Promise.all([
-          listingService.getListings(),
-          agentService.getAgents(),
-          requirementService.getRequirements(),
-          commentService.getCommentsByListing(),
-          listingService.getRecordRoomListings(),
-        ]);
+      ] = await Promise.all([
+        listingService.getListings(),
+        agentService.getAgents(),
+        requirementService.getRequirements(),
+        commentService.getCommentsByListing(),
+        listingService.getRecordRoomListings(),
+      ]);
 
       setListings(storedListings);
       setAgents(storedAgents);
@@ -88,12 +90,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setCommentsByListing(storedComments);
       setRecordRoomListings(storedRecordRoomListings);
     } finally {
-      setIsLoading(false);
+      if (showGlobalLoading) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
+  const refreshAppData = useCallback(() => loadAppData(false), [loadAppData]);
+
   useEffect(() => {
-    void loadAppData();
+    void loadAppData(true);
   }, [loadAppData, role, user?.id]);
 
   const addListing = useCallback(
@@ -226,6 +232,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         commentsByListing,
         profile,
         isLoading,
+        refreshAppData,
         addListing,
         removeListing,
         addRequirement,
