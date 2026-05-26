@@ -16,6 +16,10 @@ function parseMoney(value?: string): number {
   return parseInt(cleanNumberText(value), 10) || 0;
 }
 
+function activeListings(listings: Listing[]): Listing[] {
+  return listings.filter((listing) => !listing.status || listing.status === 'active');
+}
+
 function validateListingInput(data: PostFormData): string[] {
   const errors: string[] = [];
 
@@ -125,7 +129,7 @@ function toListing(data: PostFormData, profile: UserProfile = MOCK_USER): Listin
 export const listingService = {
   async getListings(): Promise<Listing[]> {
     const listings = await getStoredValue<Listing[]>(LISTINGS_KEY, MOCK_LISTINGS);
-    return listings.filter((listing) => !listing.status || listing.status === 'active');
+    return activeListings(listings);
   },
 
   async getAllListings(): Promise<Listing[]> {
@@ -134,7 +138,7 @@ export const listingService = {
 
   async getRecordRoomListings(): Promise<Listing[]> {
     const listings = await getStoredValue<Listing[]>(LISTINGS_KEY, MOCK_LISTINGS);
-    return listings.filter((listing) => listing.status === 'record_room');
+    return listings.filter((listing) => listing.status === 'record_room' || listing.status === 'archive');
   },
 
   async createListing(data: PostFormData, profile: UserProfile): Promise<Listing> {
@@ -144,6 +148,58 @@ export const listingService = {
       ...current,
     ]);
     return newListing;
+  },
+
+  async markListingSold(listingId: string): Promise<Listing[]> {
+    return updateStoredValue<Listing[]>(
+      LISTINGS_KEY,
+      MOCK_LISTINGS,
+      (current) =>
+        current.map((listing) =>
+          listing.id === listingId
+            ? {
+                ...listing,
+                status: 'sold',
+                lastReviewedAt: new Date().toISOString(),
+              }
+            : listing
+        )
+    );
+  },
+
+  async archiveListing(listingId: string): Promise<Listing[]> {
+    return updateStoredValue<Listing[]>(
+      LISTINGS_KEY,
+      MOCK_LISTINGS,
+      (current) =>
+        current.map((listing) =>
+          listing.id === listingId
+            ? {
+                ...listing,
+                status: 'archive',
+                archivedReason: 'Archived by dealer',
+                archivedAt: new Date().toISOString(),
+              }
+            : listing
+        )
+    );
+  },
+
+  async refreshListing(listingId: string): Promise<Listing[]> {
+    return updateStoredValue<Listing[]>(
+      LISTINGS_KEY,
+      MOCK_LISTINGS,
+      (current) =>
+        current.map((listing) =>
+          listing.id === listingId
+            ? {
+                ...listing,
+                status: 'active',
+                lastRefreshedAt: new Date().toISOString(),
+              }
+            : listing
+        )
+    );
   },
 
   async removeListing(listingId: string): Promise<Listing[]> {
@@ -163,7 +219,7 @@ export const listingService = {
         )
     );
 
-    return nextListings.filter((listing) => !listing.status || listing.status === 'active');
+    return activeListings(nextListings);
   },
 
   async incrementCommentCount(listingId: string): Promise<Listing[]> {
@@ -178,6 +234,6 @@ export const listingService = {
         )
     );
 
-    return nextListings.filter((listing) => !listing.status || listing.status === 'active');
+    return activeListings(nextListings);
   },
 };
