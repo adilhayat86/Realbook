@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Animated, PanResponder, Pressable, FlatList, StyleSheet, Text, View, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -10,6 +10,8 @@ import { ListingCardSkeleton } from '@/components/SkeletonLoader';
 import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/theme/colors';
+
+const AUTO_REFRESH_MS = 45000;
 
 export function FeedScreen() {
   const { feedListings, requirements, refreshAppData } = useApp();
@@ -37,6 +39,30 @@ export function FeedScreen() {
 
   const paginatedData = feedData.slice(0, page * itemsPerPage);
   const hasMore = page * itemsPerPage < feedData.length;
+
+  const refreshFeed = useCallback(async (showSpinner = false) => {
+    if (showSpinner) {
+      setRefreshing(true);
+    }
+    setPage(1);
+    setCurrentIndex(0);
+    swipePosition.setValue({ x: 0, y: 0 });
+    try {
+      await refreshAppData();
+    } finally {
+      if (showSpinner) {
+        setRefreshing(false);
+      }
+    }
+  }, [refreshAppData, swipePosition]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      void refreshFeed(false);
+    }, AUTO_REFRESH_MS);
+
+    return () => clearInterval(intervalId);
+  }, [refreshFeed]);
 
   const completeSwipe = useCallback(
     (direction: -1 | 1) => {
@@ -95,6 +121,7 @@ export function FeedScreen() {
   );
 
   const handleSwipeLeft = () => completeSwipe(-1);
+
   const handleSwipeRight = () => completeSwipe(1);
 
   const handleModeChange = (newMode: 'list' | 'swipe') => {
@@ -112,14 +139,9 @@ export function FeedScreen() {
     }, 500);
   };
 
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    setPage(1);
-    setCurrentIndex(0);
-    swipePosition.setValue({ x: 0, y: 0 });
-    await refreshAppData();
-    setRefreshing(false);
-  }, [refreshAppData, swipePosition]);
+  const handleRefresh = useCallback(() => {
+    void refreshFeed(true);
+  }, [refreshFeed]);
 
   return (
     <View style={styles.container}>
