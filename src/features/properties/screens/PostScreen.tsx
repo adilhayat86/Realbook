@@ -1177,6 +1177,13 @@ export function PostScreen() {
 
   const renderPreview = () => (
     <>
+      <View style={styles.reviewNotice}>
+        <Ionicons name="shield-checkmark-outline" size={18} color={colors.primaryDark} />
+        <Text style={styles.reviewNoticeText}>
+          Review carefully before publishing. Realbook will run final listing checks before saving.
+        </Text>
+      </View>
+
       <View style={styles.previewCard}>
         <View style={styles.previewHeader}>
           <View>
@@ -1495,6 +1502,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     padding: 14,
     marginBottom: 12,
+  },
+  reviewNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.tagBg,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 12,
+    marginBottom: 12,
+  },
+  reviewNoticeText: {
+    flex: 1,
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
   },
   previewHeader: {
     flexDirection: 'row',
