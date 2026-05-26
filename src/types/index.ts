@@ -9,6 +9,7 @@ export type {
   DuesStatus,
   NOCStatus,
   Listing,
+  ListingStatus,
   PostFormData,
 } from './property';
 

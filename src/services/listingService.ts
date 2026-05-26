@@ -1,6 +1,6 @@
 import { MOCK_LISTINGS, MOCK_USER } from '@/data/mockData';
 import { getStoredValue, updateStoredValue } from '@/services/localRepository';
-import { Listing, PostFormData, UserProfile } from '@/types';
+import { Listing, ListingStatus, PostFormData, UserProfile } from '@/types';
 
 const LISTINGS_KEY = 'listings';
 
@@ -164,6 +164,44 @@ export const listingService = {
     );
 
     return nextListings.filter((listing) => !listing.status || listing.status === 'active');
+  },
+
+  async updateListingStatus(
+    listingId: string,
+    status: Exclude<ListingStatus, 'record_room'>
+  ): Promise<Listing[]> {
+    return updateStoredValue<Listing[]>(
+      LISTINGS_KEY,
+      MOCK_LISTINGS,
+      (current) =>
+        current.map((listing) => {
+          if (listing.id !== listingId) return listing;
+
+          const nextListing: Listing = {
+            ...listing,
+            status,
+            lastRefreshedAt: new Date().toISOString(),
+          };
+
+          if (status === 'archive') {
+            return {
+              ...nextListing,
+              archivedAt: new Date().toISOString(),
+              archivedReason: 'Archived by owner',
+            };
+          }
+
+          if (status === 'active') {
+            return {
+              ...nextListing,
+              archivedAt: undefined,
+              archivedReason: undefined,
+            };
+          }
+
+          return nextListing;
+        })
+    );
   },
 
   async incrementCommentCount(listingId: string): Promise<Listing[]> {

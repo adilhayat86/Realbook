@@ -10,6 +10,7 @@ import { MOCK_USER } from '../data/mockData';
 import {
   Agent,
   Listing,
+  ListingStatus,
   PostFormData,
   Requirement,
   SearchFilters,
@@ -32,6 +33,7 @@ import { colors } from '@/theme/colors';
 
 interface AppContextType {
   listings: Listing[];
+  allListings: Listing[];
   feedListings: FeedListing[];
   agents: Agent[];
   requirements: Requirement[];
@@ -42,6 +44,10 @@ interface AppContextType {
   refreshAppData: () => Promise<void>;
   addListing: (data: PostFormData) => void;
   removeListing: (listingId: string) => void;
+  updateListingStatus: (
+    listingId: string,
+    status: Exclude<ListingStatus, 'record_room'>
+  ) => Promise<void>;
   addRequirement: (requirement: Requirement) => void;
   addComment: (listingId: string, text: string) => Promise<void>;
   approveAgent: (agentId: string) => void;
@@ -67,6 +73,7 @@ function withLiveCommentCounts(
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const { role, user } = useAuth();
   const [listings, setListings] = useState<Listing[]>([]);
+  const [allListings, setAllListings] = useState<Listing[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [profile, setProfile] = useState<UserProfile>(MOCK_USER);
   const [requirements, setRequirements] = useState<Requirement[]>([]);
@@ -82,12 +89,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const [
         storedListings,
+        storedAllListings,
         storedAgents,
         storedRequirements,
         storedComments,
         storedRecordRoomListings,
       ] = await Promise.all([
         listingService.getListings(),
+        listingService.getAllListings(),
         agentService.getAgents(),
         requirementService.getRequirements(),
         commentService.getCommentsByListing(),
@@ -95,6 +104,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ]);
 
       setListings(withLiveCommentCounts(storedListings, storedComments));
+      setAllListings(withLiveCommentCounts(storedAllListings, storedComments));
       setAgents(storedAgents);
       setRequirements(storedRequirements);
       setCommentsByListing(storedComments);
@@ -117,17 +127,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!canPostListings(role)) return;
       const newListing = await listingService.createListing(data, profile);
       setListings((prev) => [newListing, ...prev]);
+      setAllListings((prev) => [newListing, ...prev]);
     },
     [profile, role]
   );
 
   const removeListing = useCallback(async (listingId: string) => {
     const nextListings = await listingService.removeListing(listingId);
+    const nextAllListings = await listingService.getAllListings();
     const nextRecordRoomListings = await listingService.getRecordRoomListings();
     const storedComments = await commentService.getCommentsByListing();
+    setAllListings(withLiveCommentCounts(nextAllListings, storedComments));
     setListings(withLiveCommentCounts(nextListings, storedComments));
     setRecordRoomListings(withLiveCommentCounts(nextRecordRoomListings, storedComments));
   }, []);
+
+  const updateListingStatus = useCallback(
+    async (listingId: string, status: Exclude<ListingStatus, 'record_room'>) => {
+      const nextAllListings = await listingService.updateListingStatus(listingId, status);
+      const storedComments = await commentService.getCommentsByListing();
+      const nextActiveListings = nextAllListings.filter(
+        (listing) => !listing.status || listing.status === 'active'
+      );
+
+      setAllListings(withLiveCommentCounts(nextAllListings, storedComments));
+      setListings(withLiveCommentCounts(nextActiveListings, storedComments));
+    },
+    []
+  );
 
   const addRequirement = useCallback(
     async (requirement: Requirement) => {
@@ -143,6 +170,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!canComment(role)) return;
       const newComment = await commentService.addComment(listingId, text, profile);
       const nextListings = await listingService.incrementCommentCount(listingId);
+      const nextAllListings = await listingService.getAllListings();
       const nextRecordRoomListings = await listingService.getRecordRoomListings();
 
       setCommentsByListing((prev) => {
@@ -150,6 +178,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           ...prev,
           [listingId]: [newComment, ...(prev[listingId] ?? [])],
         };
+        setAllListings(withLiveCommentCounts(nextAllListings, nextComments));
         setListings(withLiveCommentCounts(nextListings, nextComments));
         setRecordRoomListings(withLiveCommentCounts(nextRecordRoomListings, nextComments));
         return nextComments;
@@ -241,6 +270,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider
       value={{
         listings,
+        allListings,
         feedListings,
         agents,
         requirements,
@@ -251,6 +281,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         refreshAppData,
         addListing,
         removeListing,
+        updateListingStatus,
         addRequirement,
         addComment,
         approveAgent,

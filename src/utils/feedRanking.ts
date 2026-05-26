@@ -33,6 +33,7 @@ export function getRankedFeedListings(
   const agentMap = new Map(agents.map((a) => [a.id, a]));
 
   return listings
+    .filter((listing) => listing.agentId !== profile.id)
     .map((listing) => {
       const expertiseMatch = matchesExpertise(listing, profile.expertiseAreas);
       const friendMatch = followingIds.has(listing.agentId);
