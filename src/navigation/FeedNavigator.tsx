@@ -26,10 +26,12 @@ import { FeedStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<FeedStackParamList>();
 
-export function FeedNavigator() {
+export function FeedNavigator({ route }: any) {
+  const initialRouteName = route?.params?.initialRouteName ?? 'FeedMain';
+
   return (
     <Stack.Navigator
-      initialRouteName="FeedMain"
+      initialRouteName={initialRouteName}
       screenOptions={{ headerShown: false }}
     >
       <Stack.Screen name="FeedMain" component={FeedScreen} />
