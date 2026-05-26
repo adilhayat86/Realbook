@@ -35,9 +35,9 @@ const parsePrice = (value: string, fallback: number) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const expandTerms = (query: string) => {
+const expandTermGroups = (query: string) => {
   const terms = normalize(query).split(/\s+/).filter(Boolean);
-  return terms.flatMap((term) => {
+  return terms.map((term) => {
     if (term === 'flat') return ['flat', 'apartment'];
     if (term === 'apartment') return ['apartment', 'flat'];
     if (term === 'home') return ['house'];
@@ -60,10 +60,10 @@ const listingText = (listing: Listing) =>
   ].join(' '));
 
 const matchesQuery = (listing: Listing, query: string) => {
-  const terms = expandTerms(query);
-  if (terms.length === 0) return true;
+  const termGroups = expandTermGroups(query);
+  if (termGroups.length === 0) return true;
   const haystack = listingText(listing);
-  return terms.every((term) => haystack.includes(term));
+  return termGroups.every((alternatives) => alternatives.some((term) => haystack.includes(term)));
 };
 
 const matchesFilters = (listing: Listing, filters: SearchState) => {
