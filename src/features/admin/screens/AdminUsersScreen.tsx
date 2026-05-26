@@ -2,6 +2,7 @@ import React from 'react';
 import {
   FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -13,6 +14,58 @@ import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/theme/colors';
 import { Agent } from '@/types';
+
+function getMockDocumentLabel(value?: string) {
+  if (!value) return 'Missing';
+  if (value.startsWith('mock-cnic-front:')) return 'CNIC Front';
+  if (value.startsWith('mock-cnic-back:')) return 'CNIC Back';
+  if (value.startsWith('mock-card-front:')) return 'Card Front';
+  if (value.startsWith('mock-card-back:')) return 'Card Back';
+  return value;
+}
+
+function getMockDocumentDetail(value?: string) {
+  if (!value) return 'Not uploaded';
+  const parts = value.split(':');
+  if (parts.length >= 3) {
+    return parts.slice(1).join(' · ');
+  }
+  return 'Uploaded for admin review';
+}
+
+function VerificationDocument({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value?: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}) {
+  const uploaded = Boolean(value);
+
+  return (
+    <View style={[styles.documentCard, !uploaded && styles.documentMissing]}>
+      <View style={styles.documentTopRow}>
+        <View style={[styles.documentIcon, uploaded && styles.documentIconUploaded]}>
+          <Ionicons
+            name={uploaded ? icon : 'alert-circle-outline'}
+            size={16}
+            color={uploaded ? colors.primaryDark : colors.textMuted}
+          />
+        </View>
+        <Text style={styles.documentLabel}>{label}</Text>
+      </View>
+      <Text style={styles.documentTitle}>{getMockDocumentLabel(value)}</Text>
+      <Text style={styles.documentDetail} numberOfLines={2}>
+        {getMockDocumentDetail(value)}
+      </Text>
+      <Text style={[styles.documentStatus, uploaded && styles.documentStatusUploaded]}>
+        {uploaded ? 'Ready to verify' : 'Missing'}
+      </Text>
+    </View>
+  );
+}
 
 export function AdminUsersScreen({ navigation }: any) {
   const { agents, approveAgent, rejectAgent, toggleAgentBan } = useApp();
@@ -47,76 +100,92 @@ export function AdminUsersScreen({ navigation }: any) {
 
   const UserRow = ({ user }: { user: Agent }) => (
     <View style={styles.userRow}>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{user.name.charAt(0)}</Text>
-      </View>
-      <View style={styles.userInfo}>
-        <Text style={styles.userName}>{user.name}</Text>
-        <Text style={styles.userMobile}>{user.mobile}</Text>
-        <Text style={styles.userAgency}>{user.agency} - {user.city}</Text>
-        {user.officeAddress ? (
-          <Text style={styles.userAgency}>{user.officeAddress}</Text>
-        ) : null}
-        {user.status === 'pending' ? (
-          <Text style={styles.documentsText}>
-            Visiting card + CNIC uploaded
+      <View style={styles.userHeaderRow}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{user.name.charAt(0)}</Text>
+        </View>
+        <View style={styles.userInfo}>
+          <Text style={styles.userName}>{user.name}</Text>
+          <Text style={styles.userMobile}>{user.mobile}</Text>
+          <Text style={styles.userAgency}>{user.agency} - {user.city}</Text>
+          {user.officeAddress ? (
+            <Text style={styles.userAgency}>{user.officeAddress}</Text>
+          ) : null}
+          <Text
+            style={[
+              styles.userStatus,
+              user.status === 'banned' && styles.userStatusBanned,
+              user.status === 'pending' && styles.userStatusPending,
+              user.status === 'rejected' && styles.userStatusRejected,
+            ]}
+          >
+            {getStatusLabel(user)}
           </Text>
-        ) : null}
-        <Text
-          style={[
-            styles.userStatus,
-            user.status === 'banned' && styles.userStatusBanned,
-            user.status === 'pending' && styles.userStatusPending,
-            user.status === 'rejected' && styles.userStatusRejected,
-          ]}
-        >
-          {getStatusLabel(user)}
-        </Text>
+        </View>
+        <View style={styles.userActions}>
+          <Pressable
+            style={styles.actionBtn}
+            onPress={() => navigation.navigate('ProfileMain', { agentId: user.id })}
+            accessibilityRole="button"
+            accessibilityLabel={`View ${user.name}`}
+          >
+            <Ionicons name="eye-outline" size={20} color={colors.primary} />
+          </Pressable>
+          <Pressable
+            style={styles.actionBtn}
+            onPress={() => toggleAgentBan(user.id)}
+            accessibilityRole="button"
+            accessibilityLabel={
+              user.status === 'banned' ? `Unban ${user.name}` : `Ban ${user.name}`
+            }
+          >
+            <Ionicons
+              name={user.status === 'banned' ? 'checkmark-circle-outline' : 'ban-outline'}
+              size={20}
+              color={user.status === 'banned' ? colors.primary : '#EF4444'}
+            />
+          </Pressable>
+        </View>
       </View>
-      <View style={styles.userActions}>
-        <Pressable
-          style={styles.actionBtn}
-          onPress={() => navigation.navigate('ProfileMain', { agentId: user.id })}
-          accessibilityRole="button"
-          accessibilityLabel={`View ${user.name}`}
-        >
-          <Ionicons name="eye-outline" size={20} color={colors.primary} />
-        </Pressable>
-        <Pressable
-          style={styles.actionBtn}
-          onPress={() => toggleAgentBan(user.id)}
-          accessibilityRole="button"
-          accessibilityLabel={
-            user.status === 'banned' ? `Unban ${user.name}` : `Ban ${user.name}`
-          }
-        >
-          <Ionicons
-            name={user.status === 'banned' ? 'checkmark-circle-outline' : 'ban-outline'}
-            size={20}
-            color={user.status === 'banned' ? colors.primary : '#EF4444'}
-          />
-        </Pressable>
-        {user.status === 'pending' ? (
-          <>
+
+      {user.status === 'pending' ? (
+        <View style={styles.verificationPanel}>
+          <View style={styles.verificationHeader}>
+            <Text style={styles.verificationTitle}>Verification Documents</Text>
+            <Text style={styles.verificationHint}>Mock data for admin testing</Text>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.documentsRow}
+          >
+            <VerificationDocument label="CNIC Front" value={user.cnicFront} icon="id-card-outline" />
+            <VerificationDocument label="CNIC Back" value={user.cnicBack} icon="id-card-outline" />
+            <VerificationDocument label="Card Front" value={user.visitingCardFront} icon="card-outline" />
+            <VerificationDocument label="Card Back" value={user.visitingCardBack} icon="card-outline" />
+          </ScrollView>
+          <View style={styles.reviewActions}>
             <Pressable
-              style={styles.approveBtn}
+              style={styles.approveLargeBtn}
               onPress={() => approveAgent(user.id)}
               accessibilityRole="button"
               accessibilityLabel={`Approve ${user.name}`}
             >
-              <Ionicons name="checkmark" size={20} color="#fff" />
+              <Ionicons name="checkmark" size={18} color="#fff" />
+              <Text style={styles.reviewActionText}>Approve</Text>
             </Pressable>
             <Pressable
-              style={styles.rejectBtn}
+              style={styles.rejectLargeBtn}
               onPress={() => rejectAgent(user.id)}
               accessibilityRole="button"
               accessibilityLabel={`Reject ${user.name}`}
             >
-              <Ionicons name="close" size={20} color="#fff" />
+              <Ionicons name="close" size={18} color="#fff" />
+              <Text style={styles.reviewActionText}>Reject</Text>
             </Pressable>
-          </>
-        ) : null}
-      </View>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 
@@ -197,14 +266,16 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   userRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 12,
-    marginBottom: 8,
+    marginBottom: 10,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
+  },
+  userHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   avatar: {
     width: 48,
@@ -253,12 +324,6 @@ const styles = StyleSheet.create({
   userStatusRejected: {
     color: colors.textMuted,
   },
-  documentsText: {
-    fontSize: 12,
-    color: colors.primary,
-    marginTop: 2,
-    fontWeight: '600',
-  },
   userActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -276,21 +341,116 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  approveBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.primary,
+  verificationPanel: {
+    marginTop: 12,
+    backgroundColor: colors.gray50,
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
+  verificationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  verificationTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  verificationHint: {
+    fontSize: 11,
+    color: colors.textMuted,
+  },
+  documentsRow: {
+    gap: 8,
+    paddingRight: 4,
+  },
+  documentCard: {
+    width: 150,
+    minHeight: 116,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  documentMissing: {
+    opacity: 0.7,
+  },
+  documentTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  documentIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.gray100,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rejectBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#EF4444',
+  documentIconUploaded: {
+    backgroundColor: colors.tagBg,
+  },
+  documentLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.textSecondary,
+  },
+  documentTitle: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: colors.text,
+  },
+  documentDetail: {
+    fontSize: 11,
+    color: colors.textMuted,
+    lineHeight: 15,
+    marginTop: 4,
+  },
+  documentStatus: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.textMuted,
+    marginTop: 8,
+  },
+  documentStatusUploaded: {
+    color: colors.primaryDark,
+  },
+  reviewActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+  },
+  approveLargeBtn: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  rejectLargeBtn: {
+    flex: 1,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  reviewActionText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '900',
   },
   sectionHeader: {
     paddingHorizontal: 16,
