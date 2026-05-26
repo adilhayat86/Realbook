@@ -14,11 +14,12 @@ import { GuestProfileScreen } from '@/features/auth/screens/GuestProfileScreen';
 import { ListingDetailScreen } from '@/features/properties/screens/ListingDetailScreen';
 import { CommentsScreen } from '@/features/properties/screens/CommentsScreen';
 import { useAuth } from '@/context/AuthContext';
-import { ProfileStackParamList } from './types';
+import { FeedStackParamList, ProfileStackParamList } from './types';
 import { colors } from '@/theme/colors';
 
 const Tab = createBottomTabNavigator();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
+const SearchStack = createNativeStackNavigator<FeedStackParamList>();
 
 function ProfileNavigator() {
   return (
@@ -33,6 +34,17 @@ function ProfileNavigator() {
 
 function AdminNavigator() {
   return <FeedNavigator route={{ params: { initialRouteName: 'Admin' } }} />;
+}
+
+function SearchNavigator() {
+  return (
+    <SearchStack.Navigator screenOptions={{ headerShown: false }}>
+      <SearchStack.Screen name="FeedMain" component={SearchScreen} />
+      <SearchStack.Screen name="ProfileMain" component={ProfileScreen} />
+      <SearchStack.Screen name="ListingDetail" component={ListingDetailScreen} />
+      <SearchStack.Screen name="Comments" component={CommentsScreen} />
+    </SearchStack.Navigator>
+  );
 }
 
 const TAB_BAR_CONTENT_HEIGHT = 56;
@@ -83,7 +95,7 @@ export function MainTabs() {
       })}
     >
       <Tab.Screen name="Feed" component={FeedNavigator} />
-      <Tab.Screen name="Search" component={SearchScreen} />
+      <Tab.Screen name="Search" component={SearchNavigator} />
       <Tab.Screen
         name="Post"
         component={PostScreen}

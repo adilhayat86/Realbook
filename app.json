@@ -21,10 +21,16 @@
         "backgroundColor": "#075E54"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.adilhayat.DealerTribe"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f1066320-d0ab-49c3-b597-57939fb1ae3a"
+      }
     }
   }
 }

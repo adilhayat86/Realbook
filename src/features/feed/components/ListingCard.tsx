@@ -48,9 +48,21 @@ export function ListingCard({ listing, popularityRank, hideAgent }: ListingCardP
   const locationText = [listing.society, listing.phase, listing.block].filter(Boolean).join(' · ');
   const topTag = listing.tags[0] ? formatTagLabel(listing.tags[0]) : 'Inventory';
 
-  const openAgent = () => navigation.navigate('ProfileMain', { agentId: listing.agentId });
-  const openDetails = () => navigation.navigate('ListingDetail', { listingId: listing.id });
-  const openComments = () => navigation.navigate('Comments', { listingId: listing.id });
+  const navigateToFeedRoute = (screen: keyof FeedStackParamList, params: object) => {
+    const nav = navigation as any;
+    const routeNames = nav.getState?.().routeNames ?? [];
+
+    if (routeNames.includes(screen)) {
+      nav.navigate(screen, params);
+      return;
+    }
+
+    nav.getParent?.()?.navigate('Feed', { screen, params });
+  };
+
+  const openAgent = () => navigateToFeedRoute('ProfileMain', { agentId: listing.agentId });
+  const openDetails = () => navigateToFeedRoute('ListingDetail', { listingId: listing.id });
+  const openComments = () => navigateToFeedRoute('Comments', { listingId: listing.id });
 
   return (
     <View style={styles.cardWrap}>
