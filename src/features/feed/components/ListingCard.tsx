@@ -68,7 +68,8 @@ export function ListingCard({ listing, popularityRank, hideAgent }: ListingCardP
     <View style={styles.cardWrap}>
       {popularityRank != null ? (
         <View style={styles.popularityRow}>
-          <Text style={styles.popularityText}>#{popularityRank} · {listing.commentCount} comments</Text>
+          <Ionicons name="trending-up-outline" size={12} color={colors.primaryDark} />
+          <Text style={styles.popularityText}>#{popularityRank} by activity · {listing.commentCount} comments</Text>
         </View>
       ) : null}
 
@@ -143,20 +144,26 @@ export function ListingCard({ listing, popularityRank, hideAgent }: ListingCardP
             <Image source={{ uri: listing.images[0] }} style={styles.thumb} resizeMode="cover" />
           ) : (
             <View style={styles.thumbPlaceholder}>
-              <Ionicons name="image-outline" size={24} color={colors.textMuted} />
+              <Ionicons name="business-outline" size={26} color={colors.textMuted} />
             </View>
           )}
 
           <View style={styles.mainCopy}>
-            <View style={styles.titleRow}>
-              <Text style={styles.title} numberOfLines={1}>{title}</Text>
-              <Text style={styles.price}>{formatPrice(listing.price)}</Text>
+            <Text style={styles.title} numberOfLines={1}>{title}</Text>
+            <Text style={styles.price} numberOfLines={1}>{formatPrice(listing.price)}</Text>
+            <View style={styles.locationRow}>
+              <Ionicons name="location-outline" size={13} color={colors.textSecondary} />
+              <Text style={styles.location} numberOfLines={1}>{locationText || listing.city}</Text>
             </View>
-            <Text style={styles.location} numberOfLines={1}>{locationText || listing.city}</Text>
             <View style={styles.metaRow}>
-              <Text style={styles.metaText}>{sizeText}</Text>
-              <Text style={styles.metaDot}>•</Text>
-              <Text style={styles.metaText}>{listing.city}</Text>
+              <View style={styles.metaPill}>
+                <Ionicons name="resize-outline" size={12} color={colors.textSecondary} />
+                <Text style={styles.metaText}>{sizeText}</Text>
+              </View>
+              <View style={styles.metaPill}>
+                <Ionicons name="navigate-outline" size={12} color={colors.textSecondary} />
+                <Text style={styles.metaText}>{listing.city}</Text>
+              </View>
             </View>
             {listing.possessionStatus ? (
               <Text style={styles.status} numberOfLines={1}>{listing.possessionStatus}</Text>
@@ -175,14 +182,14 @@ export function ListingCard({ listing, popularityRank, hideAgent }: ListingCardP
             accessibilityLabel="Open comments"
           >
             <Ionicons name="chatbubble-outline" size={14} color={colors.textSecondary} />
-            <Text style={styles.footerText}>{listing.commentCount}</Text>
+            <Text style={styles.footerText}>{listing.commentCount} comments</Text>
           </Pressable>
           <View style={styles.footerAction}>
             <Ionicons name="pricetag-outline" size={14} color={colors.textSecondary} />
             <Text style={styles.footerText}>{listing.offerCount} offers</Text>
           </View>
           <View style={styles.detailsAction}>
-            <Text style={styles.detailsText}>View</Text>
+            <Text style={styles.detailsText}>Details</Text>
             <Ionicons name="chevron-forward" size={14} color={colors.primaryDark} />
           </View>
         </View>
@@ -195,38 +202,41 @@ export default React.memo(ListingCard);
 
 const styles = StyleSheet.create({
   cardWrap: {
-    marginHorizontal: 10,
-    marginVertical: 5,
+    marginHorizontal: 12,
+    marginVertical: 6,
   },
   popularityRow: {
-    marginBottom: 4,
-    paddingHorizontal: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 5,
+    paddingHorizontal: 6,
   },
   popularityText: {
     fontSize: 11,
-    color: colors.textMuted,
-    fontWeight: '700',
+    color: colors.primaryDark,
+    fontWeight: '800',
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 14,
-    padding: 11,
+    borderRadius: 18,
+    padding: 12,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     shadowColor: colors.shadowDark,
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 1,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
   },
   cardPressed: {
-    opacity: 0.9,
+    opacity: 0.92,
   },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 9,
     gap: 8,
   },
   badgeRow: {
@@ -236,7 +246,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   miniBadge: {
-    backgroundColor: colors.gray50,
+    backgroundColor: colors.tagBg,
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -253,34 +263,34 @@ const styles = StyleSheet.create({
   date: {
     fontSize: 10,
     color: colors.textMuted,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   agentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 9,
+    marginBottom: 10,
   },
   agentPressed: {
     opacity: 0.75,
   },
   avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    marginRight: 9,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 10,
   },
   avatarFallback: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 9,
+    marginRight: 10,
   },
   avatarText: {
     color: colors.white,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '900',
   },
   agentCopy: {
@@ -301,84 +311,94 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textSecondary,
     marginTop: 1,
+    fontWeight: '600',
   },
   iconActions: {
     flexDirection: 'row',
-    gap: 11,
+    gap: 12,
     alignItems: 'center',
   },
   bodyRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
   },
   thumb: {
-    width: 82,
-    height: 82,
-    borderRadius: 11,
+    width: 92,
+    height: 96,
+    borderRadius: 14,
     backgroundColor: colors.inputBg,
   },
   thumbPlaceholder: {
-    width: 82,
-    height: 82,
-    borderRadius: 11,
+    width: 92,
+    height: 96,
+    borderRadius: 14,
     backgroundColor: colors.inputBg,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   mainCopy: {
     flex: 1,
-    minHeight: 82,
+    minHeight: 96,
     justifyContent: 'center',
   },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
   title: {
-    flex: 1,
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '900',
     color: colors.text,
   },
   price: {
-    fontSize: 14,
+    fontSize: 17,
     fontWeight: '900',
     color: colors.primary,
+    marginTop: 3,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 5,
   },
   location: {
+    flex: 1,
     fontSize: 12,
     color: colors.textSecondary,
-    marginTop: 3,
+    fontWeight: '600',
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    marginTop: 5,
+    marginTop: 7,
     gap: 5,
   },
-  metaText: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    fontWeight: '700',
+  metaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.gray50,
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
   },
-  metaDot: {
-    color: colors.textMuted,
-    fontSize: 11,
+  metaText: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    fontWeight: '800',
   },
   status: {
     fontSize: 11,
     color: colors.primaryDark,
-    fontWeight: '800',
-    marginTop: 5,
+    fontWeight: '900',
+    marginTop: 6,
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    marginTop: 10,
-    paddingTop: 9,
+    gap: 12,
+    marginTop: 11,
+    paddingTop: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
@@ -390,7 +410,7 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 11,
     color: colors.textSecondary,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   detailsAction: {
     marginLeft: 'auto',
