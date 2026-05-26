@@ -24,6 +24,7 @@ import {
 } from '../utils/permissions';
 import { useAuth } from './AuthContext';
 import { agentService } from '@/services/agentService';
+import { updateStoredAuthUserRole } from '@/services/authService';
 import { commentService, ListingComment } from '@/services/commentService';
 import { listingService } from '@/services/listingService';
 import { requirementService } from '@/services/requirementService';
@@ -146,11 +147,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const approveAgent = useCallback(async (agentId: string) => {
     const nextAgents = await agentService.updateAgentStatus(agentId, 'active');
+    await updateStoredAuthUserRole(agentId, 'verified_agent');
     setAgents(nextAgents);
   }, []);
 
   const rejectAgent = useCallback(async (agentId: string) => {
     const nextAgents = await agentService.updateAgentStatus(agentId, 'rejected');
+    await updateStoredAuthUserRole(agentId, 'pending_agent');
     setAgents(nextAgents);
   }, []);
 
@@ -158,7 +161,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     async (agentId: string) => {
       const agent = agents.find((item) => item.id === agentId);
       const nextStatus = agent?.status === 'banned' ? 'active' : 'banned';
+      const nextRole = nextStatus === 'banned' ? 'banned' : 'verified_agent';
       const nextAgents = await agentService.updateAgentStatus(agentId, nextStatus);
+      await updateStoredAuthUserRole(agentId, nextRole);
       setAgents(nextAgents);
     },
     [agents]
