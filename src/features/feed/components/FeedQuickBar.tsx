@@ -4,7 +4,6 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { FeedMenuModal } from '@/features/feed/components/FeedMenuModal';
-import { useApp } from '@/context/AppContext';
 import { FeedStackParamList } from '@/navigation/types';
 import { colors } from '@/theme/colors';
 
@@ -24,7 +23,7 @@ type QuickItem = {
 const QUICK_ITEMS: QuickItem[] = [
   {
     id: 'notifications',
-    label: 'Alerts',
+    label: 'Notifications',
     icon: 'notifications-outline',
     count: 3,
     screen: 'Notifications',
@@ -38,7 +37,7 @@ const QUICK_ITEMS: QuickItem[] = [
   },
   {
     id: 'newfriends',
-    label: 'Friends',
+    label: 'New Friends',
     icon: 'person-add-outline',
     count: 2,
     screen: 'NewFriends',
@@ -47,18 +46,7 @@ const QUICK_ITEMS: QuickItem[] = [
 
 export function FeedQuickBar() {
   const navigation = useNavigation<Nav>();
-  const { refreshAppData } = useApp();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await refreshAppData();
-    } finally {
-      setRefreshing(false);
-    }
-  };
 
   return (
     <>
@@ -70,26 +58,9 @@ export function FeedQuickBar() {
           accessibilityLabel="Open feed menu"
         >
           <View style={styles.iconWrap}>
-            <Ionicons name="menu" size={25} color={colors.primary} />
+            <Ionicons name="menu" size={26} color={colors.primary} />
           </View>
           <Text style={styles.label}>Menu</Text>
-        </Pressable>
-
-        <Pressable
-          style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
-          onPress={handleRefresh}
-          disabled={refreshing}
-          accessibilityRole="button"
-          accessibilityLabel="Refresh feed"
-        >
-          <View style={styles.iconWrap}>
-            <Ionicons
-              name="refresh-outline"
-              size={24}
-              color={refreshing ? colors.textMuted : colors.primary}
-            />
-          </View>
-          <Text style={styles.label}>{refreshing ? 'Wait' : 'Refresh'}</Text>
         </Pressable>
 
         {QUICK_ITEMS.map((item) => (
@@ -101,7 +72,7 @@ export function FeedQuickBar() {
             accessibilityLabel={`Open ${item.label}`}
           >
             <View style={styles.iconWrap}>
-              <Ionicons name={item.icon} size={23} color={colors.primary} />
+              <Ionicons name={item.icon} size={24} color={colors.primary} />
               {item.count != null && item.count > 0 ? (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>
