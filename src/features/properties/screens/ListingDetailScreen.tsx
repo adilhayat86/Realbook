@@ -1,28 +1,82 @@
 import React, { useState } from 'react';
 import {
+  Image,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
-  Pressable,
-  Image,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { BackHeader } from '@/components/BackHeader';
-import { useApp } from '@/context/AppContext';
-import { FeedStackParamList, ProfileStackParamList } from '@/navigation/types';
-import { formatPrice } from '@/data/mockData';
-import { colors } from '@/theme/colors';
 import { TagChip } from '@/components/TagChip';
+import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
+import { FeedStackParamList, ProfileStackParamList } from '@/navigation/types';
+import { formatPrice, formatTagLabel } from '@/data/mockData';
+import { canComment } from '@/utils/permissions';
+import { colors } from '@/theme/colors';
 
-type Props = NativeStackScreenProps<FeedStackParamList, 'ListingDetail'> | NativeStackScreenProps<ProfileStackParamList, 'ListingDetail'>;
+type Props =
+  | NativeStackScreenProps<FeedStackParamList, 'ListingDetail'>
+  | NativeStackScreenProps<ProfileStackParamList, 'ListingDetail'>;
+
+function Field({ label, value }: { label: string; value?: string | number }) {
+  if (value == null || value === '') return null;
+
+  return (
+    <View style={styles.fieldRow}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <Text style={styles.fieldValue}>{value}</Text>
+    </View>
+  );
+}
+
+function StatusPill({ label, value }: { label: string; value?: string }) {
+  if (!value) return null;
+
+  return (
+    <View style={styles.statusPill}>
+      <Text style={styles.statusPillLabel}>{label}</Text>
+      <Text style={styles.statusPillValue}>{value}</Text>
+    </View>
+  );
+}
+
+function ActionButton({
+  icon,
+  label,
+  primary,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  primary?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        styles.actionButton,
+        primary && styles.actionButtonPrimary,
+        pressed && styles.actionButtonPressed,
+      ]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <Ionicons name={icon} size={17} color={primary ? colors.white : colors.primaryDark} />
+      <Text style={[styles.actionText, primary && styles.actionTextPrimary]}>{label}</Text>
+    </Pressable>
+  );
+}
 
 export function ListingDetailScreen({ navigation, route }: Props) {
   const { listings } = useApp();
+  const { role } = useAuth();
   const { listingId } = route.params;
-  const listing = listings.find((l) => l.id === listingId);
+  const listing = listings.find((item) => item.id === listingId);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   if (!listing) {
@@ -30,6 +84,7 @@ export function ListingDetailScreen({ navigation, route }: Props) {
       <View style={styles.container}>
         <BackHeader title="Listing" onBack={() => navigation.goBack()} />
         <View style={styles.center}>
+          <Ionicons name="alert-circle-outline" size={40} color={colors.textMuted} />
           <Text style={styles.errorText}>Listing not found</Text>
         </View>
       </View>
@@ -38,206 +93,225 @@ export function ListingDetailScreen({ navigation, route }: Props) {
 
   const images = listing.images || [];
   const hasImages = images.length > 0;
-
-  const handleAgentPress = () => {
-    const nav = navigation as any;
-    nav.navigate('ProfileMain', { agentId: listing.agentId });
-  };
-
-  const expertiseAreas = listing.agentExpertise.slice(0, 2).join(' - ');
   const isPairPlot = listing.propertyType === 'Pair Plot';
   const hasPairPlotNumbers = Boolean(listing.plotNumberOne && listing.plotNumberTwo);
+  const location = [listing.society, listing.phase, listing.block].filter(Boolean).join(' · ');
+  const title = isPairPlot && hasPairPlotNumbers
+    ? `Pair Plot ${listing.plotNumberOne} & ${listing.plotNumberTwo}`
+    : listing.propertyType;
+  const sizeLabel = isPairPlot && listing.sizeEach
+    ? `${listing.sizeEach} ${listing.sizeEachUnit || listing.sizeUnit} each`
+    : listing.size
+      ? `${listing.size} ${listing.sizeUnit}`
+      : 'Size not added';
+  const canUserComment = canComment(role);
+  const expertiseAreas = listing.agentExpertise.slice(0, 3);
+
+  const goToComments = () => {
+    (navigation as any).navigate('Comments', { listingId: listing.id });
+  };
+
+  const goToAgent = () => {
+    (navigation as any).navigate('ProfileMain', { agentId: listing.agentId });
+  };
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
+  };
+
+  const previousImage = () => {
+    setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
+  };
 
   return (
     <View style={styles.container}>
-      <BackHeader
-        title="Property Details"
-        onBack={() => navigation.goBack()}
-      />
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-        {hasImages && (
-          <View style={styles.photoCarousel}>
-            <Image
-              source={{ uri: images[currentImageIndex] }}
-              style={styles.photo}
-              resizeMode="cover"
-            />
-            {images.length > 1 && (
-              <>
-                <Pressable
-                  style={styles.photoNavLeft}
-                  onPress={() => setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1))}
-                >
-                  <Ionicons name="chevron-back" size={32} color="#fff" />
-                </Pressable>
-                <Pressable
-                  style={styles.photoNavRight}
-                  onPress={() => setCurrentImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0))}
-                >
-                  <Ionicons name="chevron-forward" size={32} color="#fff" />
-                </Pressable>
-                <View style={styles.photoIndicator}>
-                  <Text style={styles.photoIndicatorText}>
-                    {currentImageIndex + 1} / {images.length}
-                  </Text>
-                </View>
-              </>
-            )}
-          </View>
-        )}
-        <View style={styles.card}>
-          <Pressable
-            style={({ pressed }) => [styles.agentRow, pressed && styles.agentRowPressed]}
-            onPress={handleAgentPress}
-          >
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {listing.agentName.charAt(0).toUpperCase()}
-              </Text>
+      <BackHeader title="Property Details" onBack={() => navigation.goBack()} />
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.heroCard}>
+          {hasImages ? (
+            <View style={styles.photoCarousel}>
+              <Image
+                source={{ uri: images[currentImageIndex] }}
+                style={styles.photo}
+                resizeMode="cover"
+              />
+              <View style={styles.photoOverlay} />
+              {images.length > 1 ? (
+                <>
+                  <Pressable
+                    style={styles.photoNavLeft}
+                    onPress={previousImage}
+                    accessibilityRole="button"
+                    accessibilityLabel="Previous photo"
+                  >
+                    <Ionicons name="chevron-back" size={24} color={colors.white} />
+                  </Pressable>
+                  <Pressable
+                    style={styles.photoNavRight}
+                    onPress={nextImage}
+                    accessibilityRole="button"
+                    accessibilityLabel="Next photo"
+                  >
+                    <Ionicons name="chevron-forward" size={24} color={colors.white} />
+                  </Pressable>
+                </>
+              ) : null}
+              <View style={styles.photoIndicator}>
+                <Text style={styles.photoIndicatorText}>
+                  {hasImages ? currentImageIndex + 1 : 0} / {images.length}
+                </Text>
+              </View>
             </View>
-            <View style={styles.agentInfo}>
-              <Text style={styles.agentName}>{listing.agentName}</Text>
-              <Text style={styles.agency}>{listing.agentAgency}</Text>
-              <Text style={styles.expertise}>{expertiseAreas}</Text>
-            </View>
-          </Pressable>
-
-          <View style={styles.divider} />
-
-          <Text style={styles.propertyType}>{listing.propertyType}</Text>
-          <Text style={styles.price}>{formatPrice(listing.price)}</Text>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Size:</Text>
-            <Text style={styles.detailValue}>
-              {listing.size} {listing.sizeUnit}
-            </Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>City:</Text>
-            <Text style={styles.detailValue}>{listing.city}</Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Society:</Text>
-            <Text style={styles.detailValue}>{listing.society}</Text>
-          </View>
-
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Phase:</Text>
-            <Text style={styles.detailValue}>{listing.phase}</Text>
-          </View>
-
-          {listing.block && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Block:</Text>
-              <Text style={styles.detailValue}>{listing.block}</Text>
+          ) : (
+            <View style={styles.photoPlaceholder}>
+              <Ionicons name="image-outline" size={42} color={colors.textMuted} />
+              <Text style={styles.photoPlaceholderText}>No property photo added</Text>
             </View>
           )}
 
-          {isPairPlot && (
+          <View style={styles.heroBody}>
+            <View style={styles.badgeRow}>
+              <View style={styles.typeBadge}>
+                <Ionicons name="home-outline" size={12} color={colors.primaryDark} />
+                <Text style={styles.typeBadgeText}>Inventory</Text>
+              </View>
+              {listing.status === 'sold' ? (
+                <View style={styles.soldBadge}>
+                  <Text style={styles.soldBadgeText}>Sold</Text>
+                </View>
+              ) : null}
+            </View>
+            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.price}>{formatPrice(listing.price)}</Text>
+            <View style={styles.locationRow}>
+              <Ionicons name="location-outline" size={15} color={colors.textSecondary} />
+              <Text style={styles.locationText}>{listing.city}{location ? ` · ${location}` : ''}</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.quickStatsCard}>
+          <View style={styles.quickStat}>
+            <Ionicons name="resize-outline" size={17} color={colors.primaryDark} />
+            <Text style={styles.quickStatLabel}>Size</Text>
+            <Text style={styles.quickStatValue}>{sizeLabel}</Text>
+          </View>
+          <View style={styles.quickStatDivider} />
+          <View style={styles.quickStat}>
+            <Ionicons name="chatbubble-outline" size={17} color={colors.primaryDark} />
+            <Text style={styles.quickStatLabel}>Comments</Text>
+            <Text style={styles.quickStatValue}>{listing.commentCount}</Text>
+          </View>
+          <View style={styles.quickStatDivider} />
+          <View style={styles.quickStat}>
+            <Ionicons name="pricetag-outline" size={17} color={colors.primaryDark} />
+            <Text style={styles.quickStatLabel}>Offers</Text>
+            <Text style={styles.quickStatValue}>{listing.offerCount}</Text>
+          </View>
+        </View>
+
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Property Information</Text>
+          <Field label="Property Type" value={listing.propertyType} />
+          <Field label="City" value={listing.city} />
+          <Field label="Society" value={listing.society} />
+          <Field label="Phase / Sector" value={listing.phase} />
+          <Field label="Block" value={listing.block} />
+          <Field label="Size" value={sizeLabel} />
+          {isPairPlot ? (
             <>
-              <View style={styles.divider} />
-              <Text style={styles.sectionTitle}>Pair Plot Details</Text>
+              <View style={styles.softDivider} />
+              <Text style={styles.subsectionTitle}>Pair Plot Details</Text>
               {hasPairPlotNumbers ? (
                 <>
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Plot Numbers:</Text>
-                    <Text style={styles.detailValue}>
-                      {listing.plotNumberOne} & {listing.plotNumberTwo}
-                    </Text>
-                  </View>
-                  {listing.streetNumber && (
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Street Number:</Text>
-                      <Text style={styles.detailValue}>{listing.streetNumber}</Text>
-                    </View>
-                  )}
-                  {listing.sizeEach && (
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Size Each:</Text>
-                      <Text style={styles.detailValue}>
-                        {listing.sizeEach} {listing.sizeEachUnit || listing.sizeUnit}
-                      </Text>
-                    </View>
-                  )}
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Total Size:</Text>
-                    <Text style={styles.detailValue}>
-                      {listing.totalSize || listing.size} {listing.totalSizeUnit || listing.sizeUnit}
-                    </Text>
-                  </View>
+                  <Field label="Plot Numbers" value={`${listing.plotNumberOne} & ${listing.plotNumberTwo}`} />
+                  <Field label="Street Number" value={listing.streetNumber} />
+                  <Field
+                    label="Size Each"
+                    value={listing.sizeEach ? `${listing.sizeEach} ${listing.sizeEachUnit || listing.sizeUnit}` : undefined}
+                  />
+                  <Field
+                    label="Total Size"
+                    value={`${listing.totalSize || listing.size} ${listing.totalSizeUnit || listing.sizeUnit}`}
+                  />
                 </>
               ) : (
-                <Text style={styles.pairFallback}>Two adjacent/in-row plots</Text>
+                <Text style={styles.mutedText}>Two adjacent or in-row plots.</Text>
               )}
             </>
-          )}
+          ) : null}
+        </View>
 
-          <View style={styles.divider} />
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Legal & Transfer Status</Text>
+          <View style={styles.statusGrid}>
+            <StatusPill label="Possession" value={listing.possessionStatus} />
+            <StatusPill label="Registry" value={listing.registryStatus} />
+            <StatusPill label="Map" value={listing.mapStatus} />
+            <StatusPill label="Dues" value={listing.duesStatus} />
+            <StatusPill label="NOC" value={listing.nocStatus} />
+          </View>
+        </View>
 
-          <Text style={styles.sectionTitle}>Status</Text>
-          <View style={styles.statusRow}>
-            <Text style={styles.statusLabel}>Possession:</Text>
-            <Text style={styles.statusValue}>{listing.possessionStatus}</Text>
-          </View>
-          <View style={styles.statusRow}>
-            <Text style={styles.statusLabel}>Registry:</Text>
-            <Text style={styles.statusValue}>{listing.registryStatus}</Text>
-          </View>
-          <View style={styles.statusRow}>
-            <Text style={styles.statusLabel}>Map:</Text>
-            <Text style={styles.statusValue}>{listing.mapStatus}</Text>
-          </View>
-          <View style={styles.statusRow}>
-            <Text style={styles.statusLabel}>Dues:</Text>
-            <Text style={styles.statusValue}>{listing.duesStatus}</Text>
-          </View>
-          <View style={styles.statusRow}>
-            <Text style={styles.statusLabel}>NOC:</Text>
-            <Text style={styles.statusValue}>{listing.nocStatus}</Text>
-          </View>
-
-          {listing.tags.length > 0 && (
-            <>
-              <View style={styles.divider} />
-              <Text style={styles.sectionTitle}>Tags</Text>
-              <View style={styles.tags}>
-                {listing.tags.map((tag) => (
-                  <TagChip key={tag} label={tag} />
-                ))}
-              </View>
-            </>
-          )}
-
-          <View style={styles.divider} />
-
-          <View style={styles.statsRow}>
-            <Pressable
-              style={styles.stat}
-              onPress={() =>
-                (navigation as any).navigate('Comments', { listingId: listing.id })
-              }
-            >
-              <Ionicons name="chatbubble-outline" size={20} color={colors.primary} />
-              <Text style={styles.statText}>{listing.commentCount} Comments</Text>
-            </Pressable>
-            <View style={styles.stat}>
-              <Ionicons name="pricetag-outline" size={20} color={colors.primary} />
-              <Text style={styles.statText}>{listing.offerCount} Offers</Text>
+        {listing.tags.length > 0 ? (
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Highlights</Text>
+            <View style={styles.tags}>
+              {listing.tags.map((tag) => (
+                <TagChip key={tag} label={formatTagLabel(tag)} />
+              ))}
             </View>
           </View>
+        ) : null}
 
-          <Pressable
-            style={styles.commentsButton}
-            onPress={() =>
-              (navigation as any).navigate('Comments', { listingId: listing.id })
-            }
-          >
-            <Ionicons name="chatbubble-outline" size={18} color="#fff" />
-            <Text style={styles.commentsButtonText}>Open Comments</Text>
-          </Pressable>
+        <Pressable
+          style={({ pressed }) => [styles.agentCard, pressed && styles.agentCardPressed]}
+          onPress={goToAgent}
+          accessibilityRole="button"
+          accessibilityLabel={`Open ${listing.agentName} profile`}
+        >
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{listing.agentName.charAt(0).toUpperCase()}</Text>
+          </View>
+          <View style={styles.agentInfo}>
+            <View style={styles.agentNameRow}>
+              <Text style={styles.agentName}>{listing.agentName}</Text>
+              <Ionicons name="shield-checkmark" size={15} color={colors.primaryDark} />
+            </View>
+            <Text style={styles.agency}>{listing.agentAgency}</Text>
+            {expertiseAreas.length > 0 ? (
+              <Text style={styles.expertise}>{expertiseAreas.join(' · ')}</Text>
+            ) : null}
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </Pressable>
+
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Actions</Text>
+          {role === 'guest' ? (
+            <View style={styles.noticeCard}>
+              <Ionicons name="lock-closed-outline" size={18} color={colors.primaryDark} />
+              <Text style={styles.noticeText}>Guests can read details. Login is required to comment, make offers or contact agents.</Text>
+            </View>
+          ) : role === 'pending_agent' ? (
+            <View style={styles.noticeCard}>
+              <Ionicons name="time-outline" size={18} color={colors.primaryDark} />
+              <Text style={styles.noticeText}>Your account is pending approval. You can read listings but cannot participate yet.</Text>
+            </View>
+          ) : role === 'banned' ? (
+            <View style={styles.noticeCard}>
+              <Ionicons name="ban-outline" size={18} color={colors.error} />
+              <Text style={styles.noticeText}>This account is restricted. Contact admin if this is a mistake.</Text>
+            </View>
+          ) : null}
+
+          <View style={styles.actionsGrid}>
+            <ActionButton icon="chatbubble-outline" label="Comments" primary={canUserComment} onPress={goToComments} />
+            <ActionButton icon="call-outline" label="Call" onPress={() => {}} />
+            <ActionButton icon="logo-whatsapp" label="WhatsApp" onPress={() => {}} />
+            <ActionButton icon="pricetag-outline" label="Offer" onPress={() => {}} />
+          </View>
+          <Text style={styles.actionHint}>Call, WhatsApp and Offer are placeholders until the real contact/offer flow is connected.</Text>
         </View>
       </ScrollView>
     </View>
@@ -253,6 +327,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 8,
   },
   errorText: {
     fontSize: 16,
@@ -261,9 +336,20 @@ const styles = StyleSheet.create({
   scroll: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: 28,
+  },
+  heroCard: {
+    backgroundColor: colors.surface,
+    margin: 12,
+    borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
   photoCarousel: {
     width: '100%',
-    height: 250,
+    height: 230,
     backgroundColor: colors.inputBg,
     position: 'relative',
   },
@@ -271,12 +357,28 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  photoOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.08)',
+  },
+  photoPlaceholder: {
+    height: 210,
+    backgroundColor: colors.inputBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoPlaceholderText: {
+    marginTop: 8,
+    fontSize: 13,
+    color: colors.textMuted,
+    fontWeight: '700',
+  },
   photoNavLeft: {
     position: 'absolute',
     left: 12,
     top: '50%',
-    marginTop: -16,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    marginTop: -20,
+    backgroundColor: 'rgba(0,0,0,0.35)',
     borderRadius: 20,
     padding: 8,
   },
@@ -284,41 +386,208 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 12,
     top: '50%',
-    marginTop: -16,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    marginTop: -20,
+    backgroundColor: 'rgba(0,0,0,0.35)',
     borderRadius: 20,
     padding: 8,
   },
   photoIndicator: {
     position: 'absolute',
+    right: 12,
     bottom: 12,
-    left: '50%',
-    marginLeft: -24,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
   },
   photoIndicatorText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: '800',
   },
-  card: {
-    backgroundColor: colors.surface,
-    margin: 12,
-    padding: 16,
+  heroBody: {
+    padding: 14,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 8,
+  },
+  typeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.tagBg,
     borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  typeBadgeText: {
+    color: colors.primaryDark,
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  soldBadge: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  soldBadgeText: {
+    color: colors.gray900,
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: colors.text,
+  },
+  price: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: colors.primary,
+    marginTop: 4,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 8,
+  },
+  locationText: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
+  quickStatsCard: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    marginHorizontal: 12,
+    marginBottom: 10,
+    borderRadius: 16,
+    padding: 12,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  agentRow: {
+  quickStat: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 3,
+  },
+  quickStatDivider: {
+    width: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginHorizontal: 8,
+  },
+  quickStatLabel: {
+    fontSize: 10,
+    color: colors.textMuted,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  quickStatValue: {
+    fontSize: 12,
+    color: colors.text,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  sectionCard: {
+    backgroundColor: colors.surface,
+    marginHorizontal: 12,
+    marginBottom: 10,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: colors.text,
+    marginBottom: 12,
+  },
+  subsectionTitle: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: colors.text,
+    marginBottom: 10,
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 14,
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '700',
+  },
+  fieldValue: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.text,
+    fontWeight: '800',
+    textAlign: 'right',
+  },
+  softDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginVertical: 12,
+  },
+  mutedText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 19,
+  },
+  statusGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  statusPill: {
+    minWidth: '47%',
+    flex: 1,
+    backgroundColor: colors.gray50,
+    borderRadius: 12,
+    padding: 10,
+  },
+  statusPillLabel: {
+    fontSize: 10,
+    color: colors.textMuted,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    marginBottom: 3,
+  },
+  statusPillValue: {
+    fontSize: 12,
+    color: colors.text,
+    fontWeight: '800',
+  },
+  tags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  agentCard: {
+    backgroundColor: colors.surface,
+    marginHorizontal: 12,
+    marginBottom: 10,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
   },
-  agentRowPressed: {
-    opacity: 0.7,
+  agentCardPressed: {
+    opacity: 0.75,
   },
   avatar: {
     width: 48,
@@ -330,16 +599,21 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   avatarText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '900',
   },
   agentInfo: {
     flex: 1,
   },
+  agentNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
   agentName: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '900',
     color: colors.text,
   },
   agency: {
@@ -349,103 +623,63 @@ const styles = StyleSheet.create({
   },
   expertise: {
     fontSize: 11,
-    color: colors.primary,
-    marginTop: 2,
-    fontWeight: '500',
+    color: colors.primaryDark,
+    marginTop: 3,
+    fontWeight: '800',
   },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
-    marginVertical: 16,
-  },
-  propertyType: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  price: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.primary,
-    marginBottom: 16,
-  },
-  detailRow: {
+  noticeCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 8,
+    backgroundColor: colors.tagBg,
+    borderRadius: 12,
+    padding: 10,
     marginBottom: 12,
   },
-  detailLabel: {
-    fontSize: 14,
+  noticeText: {
+    flex: 1,
+    fontSize: 12,
     color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  detailValue: {
-    fontSize: 14,
-    color: colors.text,
-    fontWeight: '600',
-    flexShrink: 1,
-    textAlign: 'right',
-    marginLeft: 12,
-  },
-  pairFallback: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    lineHeight: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
+    lineHeight: 17,
     fontWeight: '700',
-    color: colors.text,
-    marginBottom: 12,
   },
-  statusRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  statusLabel: {
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  statusValue: {
-    fontSize: 13,
-    color: colors.text,
-    fontWeight: '600',
-  },
-  tags: {
+  actionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingTop: 8,
-  },
-  stat: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  statText: {
-    fontSize: 14,
-    color: colors.text,
-    fontWeight: '600',
-  },
-  commentsButton: {
-    flexDirection: 'row',
+  actionButton: {
+    flexGrow: 1,
+    flexBasis: '47%',
+    minHeight: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.gray50,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    paddingVertical: 12,
-    marginTop: 16,
+    flexDirection: 'row',
+    gap: 7,
   },
-  commentsButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
+  actionButtonPrimary: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  actionButtonPressed: {
+    opacity: 0.78,
+  },
+  actionText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: colors.primaryDark,
+  },
+  actionTextPrimary: {
+    color: colors.white,
+  },
+  actionHint: {
+    fontSize: 11,
+    color: colors.textMuted,
+    lineHeight: 16,
+    marginTop: 10,
+    textAlign: 'center',
   },
 });
