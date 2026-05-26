@@ -19,6 +19,7 @@ interface AuthContextType {
   role: UserRole;
   user: AuthUser | null;
   login: (mobile: string, passcode: string, remember?: boolean) => Promise<boolean>;
+  continueAsGuest: () => Promise<void>;
   register: (input: SignUpInput, remember?: boolean) => Promise<boolean>;
   resetPassword: (mobile: string) => Promise<boolean>;
   getRememberedLogin: () => Promise<{ mobile: string; passcode: string } | null>;
@@ -27,6 +28,16 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const GUEST_USER: AuthUser = {
+  id: 'guest-user',
+  name: 'Guest Visitor',
+  mobile: '',
+  role: 'guest',
+  agency: 'Guest Mode',
+  city: 'Rawalpindi',
+  expertiseAreas: [],
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { user, isHydrated, setUser, setRole, setHydrated, clearSession } =
@@ -67,6 +78,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
+  const continueAsGuest = async () => {
+    setUser(GUEST_USER);
+    await authSessionService.saveSession(GUEST_USER);
+    await authSessionService.clearRememberedCredentials();
+  };
+
   const register = async (input: SignUpInput, remember = true) => {
     const registeredUser = await registerWithMobile(input);
     if (!registeredUser) return false;
@@ -99,6 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       role: user?.role || 'guest',
       user,
       login,
+      continueAsGuest,
       register,
       resetPassword,
       getRememberedLogin,
