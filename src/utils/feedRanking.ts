@@ -28,11 +28,11 @@ export function getRankedFeedListings(
   const followingIds = new Set(
     agents.filter((a) => a.isFollowing).map((a) => a.id)
   );
-  
-  // Create a Map for O(1) agent lookup instead of O(N) array.find
+
   const agentMap = new Map(agents.map((a) => [a.id, a]));
 
   return listings
+    .filter((listing) => listing.agentId !== profile.id)
     .map((listing) => {
       const expertiseMatch = matchesExpertise(listing, profile.expertiseAreas);
       const friendMatch = followingIds.has(listing.agentId);
@@ -43,7 +43,7 @@ export function getRankedFeedListings(
       const score =
         (expertiseMatch ? 2 : 0) +
         (friendMatch ? 1 : 0) +
-        new Date(listing.publishedAt).getTime() / 1e15;
+        new Date(listing.lastRefreshedAt || listing.publishedAt).getTime() / 1e15;
 
       const feedListing: FeedListing = {
         ...listing,
@@ -56,10 +56,8 @@ export function getRankedFeedListings(
       return {
         feedListing,
         score,
-        included: expertiseMatch || friendMatch,
       };
     })
-    .filter((item) => item.included)
     .sort((a, b) => b.score - a.score)
     .map((item) => item.feedListing);
 }
