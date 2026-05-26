@@ -6,6 +6,19 @@ const AGENTS_KEY = 'agents';
 
 export type AgentStatus = NonNullable<Agent['status']>;
 
+export interface PendingAgentInput {
+  id: string;
+  name: string;
+  mobile: string;
+  agency: string;
+  city: string;
+  officeAddress?: string;
+  visitingCardFront?: string;
+  visitingCardBack?: string;
+  cnicFront?: string;
+  cnicBack?: string;
+}
+
 const MOCK_VERIFICATION_DOCUMENTS: Record<string, Partial<Agent>> = {
   a2: {
     officeAddress: 'Office 4, DHA Phase 6 Commercial, Rawalpindi',
@@ -89,6 +102,14 @@ function seedAgentDocuments(agents: Agent[]): Agent[] {
   return agents.map(withMockVerificationDocuments);
 }
 
+function normalizeSignupDocument(
+  value: string | undefined,
+  fallback: string
+): string | undefined {
+  if (!value) return undefined;
+  return value === 'uploaded' ? fallback : value;
+}
+
 export const agentService = {
   async getAgents(): Promise<Agent[]> {
     const storedAgents = await getStoredValue<Agent[]>(AGENTS_KEY, MOCK_AGENTS);
@@ -99,11 +120,56 @@ export const agentService = {
     return nextAgents;
   },
 
+  async createPendingAgent(input: PendingAgentInput): Promise<Agent[]> {
+    const submittedAt = new Date().toLocaleString('en-PK', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+    const nextAgent: Agent = {
+      id: input.id,
+      name: input.name.trim(),
+      mobile: input.mobile.trim(),
+      agency: input.agency.trim(),
+      city: input.city.trim(),
+      listingsCount: 0,
+      isFollowing: false,
+      status: 'pending',
+      officeAddress: input.officeAddress?.trim(),
+      visitingCardFront: normalizeSignupDocument(
+        input.visitingCardFront,
+        `mock-card-front:${input.agency}:${input.name}:Submitted during signup`
+      ),
+      visitingCardBack: normalizeSignupDocument(
+        input.visitingCardBack,
+        `mock-card-back:${input.agency}:${input.mobile}:${input.officeAddress || input.city}`
+      ),
+      cnicFront: normalizeSignupDocument(
+        input.cnicFront,
+        `mock-cnic-front:${input.name}:${input.mobile}:Submitted during signup`
+      ),
+      cnicBack: normalizeSignupDocument(
+        input.cnicBack,
+        `mock-cnic-back:${input.name}:${input.city}:Submitted during signup`
+      ),
+      submittedAt,
+    };
+
+    return updateStoredValue<Agent[]>(AGENTS_KEY, MOCK_AGENTS, (current) => {
+      const seededCurrent = seedAgentDocuments(current);
+      const withoutDuplicate = seededCurrent.filter(
+        (agent) => agent.id !== nextAgent.id && agent.mobile !== nextAgent.mobile
+      );
+      return [nextAgent, ...withoutDuplicate];
+    });
+  },
+
   async updateAgentStatus(agentId: string, status: AgentStatus): Promise<Agent[]> {
     const nextAgents = await updateStoredValue<Agent[]>(AGENTS_KEY, MOCK_AGENTS, (current) =>
       seedAgentDocuments(current).map((agent) =>
         agent.id === agentId
-          ? { ...agent, status, reviewedAt: 'Just now' }
+          ? { ...agent, status, reviewedAt: new Date().toLocaleString('en-PK') }
           : agent
       )
     );
