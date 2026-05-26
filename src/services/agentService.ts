@@ -6,9 +6,22 @@ const AGENTS_KEY = 'agents';
 
 export type AgentStatus = NonNullable<Agent['status']>;
 
+function withMockVisitingCards(agents: Agent[]): Agent[] {
+  return agents.map((agent) => {
+    const mockAgent = MOCK_AGENTS.find((item) => item.id === agent.id);
+    return {
+      ...agent,
+      officeAddress: agent.officeAddress || mockAgent?.officeAddress,
+      visitingCardFront: agent.visitingCardFront || mockAgent?.visitingCardFront,
+      visitingCardBack: agent.visitingCardBack || mockAgent?.visitingCardBack,
+    };
+  });
+}
+
 export const agentService = {
   async getAgents(): Promise<Agent[]> {
-    return getStoredValue<Agent[]>(AGENTS_KEY, MOCK_AGENTS);
+    const storedAgents = await getStoredValue<Agent[]>(AGENTS_KEY, MOCK_AGENTS);
+    return withMockVisitingCards(storedAgents);
   },
 
   async updateAgentStatus(agentId: string, status: AgentStatus): Promise<Agent[]> {

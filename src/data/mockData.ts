@@ -13,8 +13,8 @@ export const MOCK_USER: UserProfile = {
   status: 'active',
   photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200',
   officeAddress: 'Office 12, DHA Business Avenue',
-  visitingCardFront: 'Uploaded',
-  visitingCardBack: 'Uploaded',
+  visitingCardFront: 'mock-card:khan-properties',
+  visitingCardBack: 'mock-card:khan-properties-back',
 };
 
 export const MOCK_LISTINGS: Listing[] = [
@@ -265,6 +265,9 @@ export const MOCK_AGENTS: Agent[] = [
     isFollowing: true,
     status: 'active',
     photo: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200',
+    officeAddress: 'Suite 8, DHA Phase 6, Lahore',
+    visitingCardFront: 'mock-card:malik-estate',
+    visitingCardBack: 'mock-card:malik-estate-back',
   },
   {
     id: 'a3',
@@ -276,6 +279,9 @@ export const MOCK_AGENTS: Agent[] = [
     isFollowing: false,
     status: 'active',
     photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200',
+    officeAddress: 'Office 4, Blue Area, Islamabad',
+    visitingCardFront: 'mock-card:ali-realtors',
+    visitingCardBack: 'mock-card:ali-realtors-back',
   },
   {
     id: 'a4',
@@ -287,6 +293,9 @@ export const MOCK_AGENTS: Agent[] = [
     isFollowing: false,
     status: 'active',
     photo: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200',
+    officeAddress: 'Gulberg Main Boulevard, Lahore',
+    visitingCardFront: 'mock-card:raza-properties',
+    visitingCardBack: 'mock-card:raza-properties-back',
   },
   {
     id: 'a5',
@@ -298,6 +307,9 @@ export const MOCK_AGENTS: Agent[] = [
     isFollowing: true,
     status: 'active',
     photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200',
+    officeAddress: 'Clifton Block 5, Karachi',
+    visitingCardFront: 'mock-card:sheikh-associates',
+    visitingCardBack: 'mock-card:sheikh-associates-back',
   },
   {
     id: 'a6',
@@ -309,6 +321,9 @@ export const MOCK_AGENTS: Agent[] = [
     isFollowing: false,
     status: 'active',
     photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200',
+    officeAddress: 'Model Town Link Road, Lahore',
+    visitingCardFront: 'mock-card:noor-realty',
+    visitingCardBack: 'mock-card:noor-realty-back',
   },
   {
     id: 'a7',
@@ -320,8 +335,8 @@ export const MOCK_AGENTS: Agent[] = [
     isFollowing: false,
     status: 'pending',
     officeAddress: 'Office 12, Bahria Phase 7, Rawalpindi',
-    visitingCardFront: 'Uploaded',
-    visitingCardBack: 'Uploaded',
+    visitingCardFront: 'mock-card:twin-cities-estate',
+    visitingCardBack: 'mock-card:twin-cities-estate-back',
     cnicFront: 'Admin document uploaded',
     cnicBack: 'Admin document uploaded',
     submittedAt: 'Today, 10:30 AM',
@@ -336,8 +351,8 @@ export const MOCK_AGENTS: Agent[] = [
     isFollowing: false,
     status: 'pending',
     officeAddress: 'G-11 Markaz, Islamabad',
-    visitingCardFront: 'Uploaded',
-    visitingCardBack: 'Uploaded',
+    visitingCardFront: 'mock-card:capital-homes',
+    visitingCardBack: 'mock-card:capital-homes-back',
     cnicFront: 'Admin document uploaded',
     cnicBack: 'Admin document uploaded',
     submittedAt: 'Yesterday, 6:15 PM',

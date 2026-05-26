@@ -81,18 +81,6 @@ export function FeedScreen() {
         right={
           <View style={styles.headerButtons}>
             <Pressable
-              style={styles.modeButton}
-              onPress={() => handleModeChange(mode === 'list' ? 'swipe' : 'list')}
-              accessibilityRole="button"
-              accessibilityLabel={mode === 'list' ? 'Switch to swipe feed' : 'Switch to list feed'}
-            >
-              <Ionicons
-                name={mode === 'list' ? 'list-outline' : 'swap-horizontal-outline'}
-                size={24}
-                color="#fff"
-              />
-            </Pressable>
-            <Pressable
               onPress={() => navigation.navigate('Requirements' as never)}
               accessibilityRole="button"
               accessibilityLabel="Post requirement"
@@ -111,6 +99,42 @@ export function FeedScreen() {
           </View>
         }
       />
+      <View style={styles.modeToggleWrap}>
+        <View style={styles.modeToggle}>
+          <Pressable
+            style={[styles.modeToggleItem, mode === 'list' && styles.modeToggleItemActive]}
+            onPress={() => handleModeChange('list')}
+            accessibilityRole="button"
+            accessibilityState={{ selected: mode === 'list' }}
+            accessibilityLabel="Show list feed"
+          >
+            <Ionicons
+              name="list-outline"
+              size={16}
+              color={mode === 'list' ? '#fff' : colors.primary}
+            />
+            <Text style={[styles.modeToggleText, mode === 'list' && styles.modeToggleTextActive]}>
+              List
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.modeToggleItem, mode === 'swipe' && styles.modeToggleItemActive]}
+            onPress={() => handleModeChange('swipe')}
+            accessibilityRole="button"
+            accessibilityState={{ selected: mode === 'swipe' }}
+            accessibilityLabel="Show swipe feed"
+          >
+            <Ionicons
+              name="swap-horizontal-outline"
+              size={16}
+              color={mode === 'swipe' ? '#fff' : colors.primary}
+            />
+            <Text style={[styles.modeToggleText, mode === 'swipe' && styles.modeToggleTextActive]}>
+              Swipe
+            </Text>
+          </Pressable>
+        </View>
+      </View>
       <FeedQuickBar />
       {mode === 'list' ? (
         <FlatList
@@ -232,8 +256,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
-  modeButton: {
-    padding: 4,
+  modeToggleWrap: {
+    backgroundColor: colors.surface,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  modeToggle: {
+    flexDirection: 'row',
+    backgroundColor: colors.inputBg,
+    borderRadius: 8,
+    padding: 3,
+  },
+  modeToggleItem: {
+    flex: 1,
+    minHeight: 36,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  modeToggleItemActive: {
+    backgroundColor: colors.primary,
+  },
+  modeToggleText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  modeToggleTextActive: {
+    color: '#fff',
   },
   swipeContainer: {
     flex: 1,

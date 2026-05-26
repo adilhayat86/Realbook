@@ -201,11 +201,19 @@ interface SelectorButtonProps {
   label: string;
   value?: string;
   placeholder: string;
+  accessibilityLabel?: string;
   disabled?: boolean;
   onPress: () => void;
 }
 
-export function SelectorButton({ label, value, placeholder, disabled, onPress }: SelectorButtonProps) {
+export function SelectorButton({
+  label,
+  value,
+  placeholder,
+  accessibilityLabel,
+  disabled,
+  onPress,
+}: SelectorButtonProps) {
   return (
     <View style={styles.selectorWrap}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -214,7 +222,7 @@ export function SelectorButton({ label, value, placeholder, disabled, onPress }:
         onPress={onPress}
         disabled={disabled}
         accessibilityRole="button"
-        accessibilityLabel={label}
+        accessibilityLabel={accessibilityLabel || label}
         accessibilityState={{ disabled: Boolean(disabled) }}
       >
         <Text style={[styles.selectorText, !value && styles.placeholderText]} numberOfLines={1}>

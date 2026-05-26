@@ -30,7 +30,7 @@ import {
   getPhasesForSociety,
   getSocieties,
 } from '@/constants/societies';
-import { City, PostFormData, PropertyType, SpecialTag } from '@/types';
+import { City, PostFormData, PropertyType, Requirement, SpecialTag } from '@/types';
 import { colors } from '@/theme/colors';
 import {
   BottomSheetSelector,
@@ -165,15 +165,75 @@ type SelectorKey =
   | 'registryStatus'
   | 'mapStatus'
   | 'duesStatus'
-  | 'nocStatus';
+  | 'nocStatus'
+  | 'requirementPropertyType'
+  | 'requirementCity'
+  | 'requirementSociety'
+  | 'requirementPhase'
+  | 'requirementSizeUnit';
+
+type PostMode = 'choice' | 'inventory' | 'requirement';
+type RequirementUrgency = 'Normal' | 'Urgent';
+
+interface RequirementFormData {
+  propertyType: PropertyType | '';
+  city: City | '';
+  society: string;
+  phase: string;
+  size: string;
+  sizeUnit: string;
+  minPrice: string;
+  maxPrice: string;
+  description: string;
+  urgency: RequirementUrgency;
+}
+
+const initialRequirementForm: RequirementFormData = {
+  propertyType: '',
+  city: '',
+  society: '',
+  phase: '',
+  size: '',
+  sizeUnit: 'Marla',
+  minPrice: '',
+  maxPrice: '',
+  description: '',
+  urgency: 'Normal',
+};
+
+const SELECTOR_TITLES: Record<SelectorKey, string> = {
+  propertyType: 'Property Type',
+  city: 'City',
+  society: 'Society',
+  phase: 'Phase / Sector',
+  block: 'Block',
+  sizeUnit: 'Size Unit',
+  sizeEachUnit: 'Size Each Unit',
+  totalSizeUnit: 'Total Size Unit',
+  possessionStatus: 'Possession',
+  registryStatus: 'Registry',
+  mapStatus: 'Map',
+  duesStatus: 'Dues',
+  nocStatus: 'NOC',
+  requirementPropertyType: 'Property Type',
+  requirementCity: 'City',
+  requirementSociety: 'Society',
+  requirementPhase: 'Phase / Sector',
+  requirementSizeUnit: 'Size Unit',
+};
 
 export function PostScreen() {
-  const { addListing } = useApp();
+  const { addListing, addRequirement, profile } = useApp();
   const { role } = useAuth();
   const navigation = useNavigation();
+  const [postMode, setPostMode] = useState<PostMode>('choice');
   const [currentStep, setCurrentStep] = useState(0);
   const [form, setForm] = useState<PostFormData>(initialForm);
+  const [requirementForm, setRequirementForm] =
+    useState<RequirementFormData>(initialRequirementForm);
   const [formError, setFormError] = useState('');
+  const [requirementError, setRequirementError] = useState('');
+  const [requirementFeedback, setRequirementFeedback] = useState('');
   const [isPosting, setIsPosting] = useState(false);
   const [activeSelector, setActiveSelector] = useState<SelectorKey | null>(null);
 
@@ -202,6 +262,17 @@ export function PostScreen() {
         : [],
     [form.city, form.society, form.phase]
   );
+  const requirementSocieties = useMemo(
+    () => (requirementForm.city ? getSocieties(requirementForm.city as City) : []),
+    [requirementForm.city]
+  );
+  const requirementPhases = useMemo(
+    () =>
+      requirementForm.city && requirementForm.society
+        ? getPhasesForSociety(requirementForm.city as City, requirementForm.society)
+        : [],
+    [requirementForm.city, requirementForm.society]
+  );
 
   const cannotPost = role === 'guest' || role === 'pending_agent' || role === 'banned';
 
@@ -211,27 +282,27 @@ export function PostScreen() {
         ? {
             subtitle: 'Login required',
             title: 'Login Required',
-            text: 'You must be logged in to post a listing.',
+            text: 'You must be logged in to post inventory or requirements.',
             button: 'Go to Login',
           }
         : role === 'pending_agent'
           ? {
               subtitle: 'Approval required',
               title: 'Pending Approval',
-              text: 'Admin must approve your dealer profile before you can post listings.',
+              text: 'Admin must approve your dealer profile before you can post inventory or requirements.',
               button: 'Back to Feed',
             }
           : {
               subtitle: 'Account restricted',
               title: 'Posting Disabled',
-              text: 'This account cannot post listings right now.',
+              text: 'This account cannot post right now.',
               button: 'Back to Feed',
             };
 
     return (
       <View style={styles.container}>
         <ScreenHeader
-          title="Post Listing"
+          title="Post"
           subtitle={blockedCopy.subtitle}
           left={
             <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back">
@@ -259,6 +330,30 @@ export function PostScreen() {
 
   const updateForm = (patch: Partial<PostFormData>) => {
     setForm((prev) => ({ ...prev, ...patch }));
+  };
+
+  const updateRequirementForm = (patch: Partial<RequirementFormData>) => {
+    setRequirementForm((prev) => ({ ...prev, ...patch }));
+  };
+
+  const openChoice = () => {
+    setPostMode('choice');
+    setFormError('');
+    setRequirementError('');
+    setRequirementFeedback('');
+    setActiveSelector(null);
+  };
+
+  const openInventoryFlow = () => {
+    setPostMode('inventory');
+    setFormError('');
+    setRequirementFeedback('');
+  };
+
+  const openRequirementFlow = () => {
+    setPostMode('requirement');
+    setRequirementError('');
+    setRequirementFeedback('');
   };
 
   const selectPropertyType = (propertyType: PropertyType) => {
@@ -382,6 +477,7 @@ export function PostScreen() {
     addListing(form);
     setForm(initialForm);
     setCurrentStep(0);
+    setPostMode('choice');
 
     setTimeout(() => {
       setIsPosting(false);
@@ -392,6 +488,61 @@ export function PostScreen() {
   const handleBack = () => {
     setFormError('');
     setCurrentStep((step) => Math.max(0, step - 1));
+  };
+
+  const validateRequirement = () => {
+    if (!requirementForm.propertyType) return 'Please select a property type.';
+    if (!requirementForm.city) return 'Please select a city.';
+    if (!requirementForm.description.trim()) return 'Please add requirement details.';
+    return '';
+  };
+
+  const handleRequirementSubmit = () => {
+    const error = validateRequirement();
+    if (error) {
+      setRequirementError(error);
+      setRequirementFeedback('');
+      return;
+    }
+
+    setRequirementError('');
+    setRequirementFeedback('');
+    setIsPosting(true);
+
+    const area =
+      requirementForm.society ||
+      requirementForm.phase ||
+      requirementForm.city ||
+      'Open area';
+
+    const newRequirement: Requirement = {
+      id: `req_${Date.now()}`,
+      agentId: profile.id,
+      agentName: profile.name,
+      agentAgency: profile.agency,
+      propertyType: requirementForm.propertyType as PropertyType,
+      city: requirementForm.city as City,
+      area,
+      society: requirementForm.society || undefined,
+      phase: requirementForm.phase || undefined,
+      size: requirementForm.size || undefined,
+      sizeUnit: requirementForm.size ? requirementForm.sizeUnit : undefined,
+      minPrice: requirementForm.minPrice || undefined,
+      maxPrice: requirementForm.maxPrice || undefined,
+      description: requirementForm.description.trim(),
+      urgency: requirementForm.urgency,
+      createdAt: new Date().toISOString(),
+    };
+
+    addRequirement(newRequirement);
+    setRequirementForm(initialRequirementForm);
+    setRequirementFeedback('Requirement posted. It will appear in the feed.');
+
+    setTimeout(() => {
+      setIsPosting(false);
+      setPostMode('choice');
+      (navigation as any).navigate('Feed');
+    }, 300);
   };
 
   const selectOption = (value: string) => {
@@ -413,6 +564,16 @@ export function PostScreen() {
       updateForm({ sizeEachUnit: value });
     } else if (activeSelector === 'totalSizeUnit') {
       setPairTotalSizeUnit(value);
+    } else if (activeSelector === 'requirementPropertyType') {
+      updateRequirementForm({ propertyType: value as PropertyType });
+    } else if (activeSelector === 'requirementCity') {
+      updateRequirementForm({ city: value as City, society: '', phase: '' });
+    } else if (activeSelector === 'requirementSociety') {
+      updateRequirementForm({ society: value, phase: '' });
+    } else if (activeSelector === 'requirementPhase') {
+      updateRequirementForm({ phase: value });
+    } else if (activeSelector === 'requirementSizeUnit') {
+      updateRequirementForm({ sizeUnit: value });
     } else {
       updateForm({ [activeSelector]: value });
     }
@@ -436,6 +597,16 @@ export function PostScreen() {
       case 'sizeEachUnit':
       case 'totalSizeUnit':
         return SELECTOR_OPTIONS.sizeUnit;
+      case 'requirementPropertyType':
+        return SELECTOR_OPTIONS.propertyType;
+      case 'requirementCity':
+        return SELECTOR_OPTIONS.city;
+      case 'requirementSociety':
+        return requirementSocieties;
+      case 'requirementPhase':
+        return requirementPhases;
+      case 'requirementSizeUnit':
+        return SELECTOR_OPTIONS.sizeUnit;
       case 'possessionStatus':
         return SELECTOR_OPTIONS.possessionStatus;
       case 'registryStatus':
@@ -451,13 +622,196 @@ export function PostScreen() {
     }
   })();
 
-  const selectorValue = activeSelector ? String(form[activeSelector as keyof PostFormData] || '') : '';
-  const selectorTitle = activeSelector
-    ? activeSelector
-        .replace(/([A-Z])/g, ' $1')
-        .replace(/^./, (letter) => letter.toUpperCase())
-    : '';
-  const selectorSearchable = activeSelector === 'society' || activeSelector === 'phase' || activeSelector === 'block';
+  const selectorValue = (() => {
+    if (!activeSelector) return '';
+
+    switch (activeSelector) {
+      case 'requirementPropertyType':
+        return requirementForm.propertyType;
+      case 'requirementCity':
+        return requirementForm.city;
+      case 'requirementSociety':
+        return requirementForm.society;
+      case 'requirementPhase':
+        return requirementForm.phase;
+      case 'requirementSizeUnit':
+        return requirementForm.sizeUnit;
+      default:
+        return String(form[activeSelector as keyof PostFormData] || '');
+    }
+  })();
+  const selectorTitle = activeSelector ? SELECTOR_TITLES[activeSelector] : '';
+  const selectorSearchable =
+    activeSelector === 'society' ||
+    activeSelector === 'phase' ||
+    activeSelector === 'block' ||
+    activeSelector === 'requirementSociety' ||
+    activeSelector === 'requirementPhase';
+
+  const renderChoice = () => (
+    <View style={styles.choiceBody}>
+      <View style={styles.choicePanel}>
+        <Text style={styles.choiceTitle}>What do you want to post?</Text>
+        <Pressable
+          style={styles.choiceOption}
+          onPress={openInventoryFlow}
+          accessibilityRole="button"
+          accessibilityLabel="Post Inventory. Add a property listing or available inventory"
+        >
+          <View style={styles.choiceIcon}>
+            <Ionicons name="business-outline" size={24} color={colors.primary} />
+          </View>
+          <View style={styles.choiceCopy}>
+            <Text style={styles.choiceOptionTitle}>Post Inventory</Text>
+            <Text style={styles.choiceSubtitle}>Add a property listing / available inventory</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </Pressable>
+        <Pressable
+          style={styles.choiceOption}
+          onPress={openRequirementFlow}
+          accessibilityRole="button"
+          accessibilityLabel="Create Requirement. Post a buyer need or demand"
+        >
+          <View style={styles.choiceIcon}>
+            <Ionicons name="megaphone-outline" size={24} color={colors.primary} />
+          </View>
+          <View style={styles.choiceCopy}>
+            <Text style={styles.choiceOptionTitle}>Create Requirement</Text>
+            <Text style={styles.choiceSubtitle}>Post a buyer need / demand</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </Pressable>
+      </View>
+    </View>
+  );
+
+  const renderRequirementFlow = () => (
+    <View style={styles.requirementShell}>
+      <ScrollView
+        style={styles.stepScroll}
+        contentContainerStyle={styles.requirementContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.sectionTitle}>Requirement Basics</Text>
+        <SelectorButton
+          label="Property Type"
+          value={requirementForm.propertyType}
+          placeholder="Select property type"
+          accessibilityLabel="Requirement property type"
+          onPress={() => setActiveSelector('requirementPropertyType')}
+        />
+        <SelectorButton
+          label="City"
+          value={requirementForm.city}
+          placeholder="Select city"
+          accessibilityLabel="Requirement city"
+          onPress={() => setActiveSelector('requirementCity')}
+        />
+        <SelectorButton
+          label="Society"
+          value={requirementForm.society}
+          placeholder={requirementForm.city ? 'Select society if needed' : 'Select city first'}
+          accessibilityLabel="Requirement society"
+          disabled={!requirementForm.city}
+          onPress={() => setActiveSelector('requirementSociety')}
+        />
+        <SelectorButton
+          label="Phase / Sector"
+          value={requirementForm.phase}
+          placeholder={requirementForm.society ? 'Select phase if needed' : 'Select society first'}
+          accessibilityLabel="Requirement phase or sector"
+          disabled={!requirementForm.society}
+          onPress={() => setActiveSelector('requirementPhase')}
+        />
+
+        <Text style={styles.sectionTitle}>Need Details</Text>
+        <UnitInput
+          label="Size"
+          value={requirementForm.size}
+          unit={requirementForm.sizeUnit}
+          placeholder="Optional"
+          onChangeText={(size) => updateRequirementForm({ size })}
+          onUnitPress={() => setActiveSelector('requirementSizeUnit')}
+        />
+        <View style={styles.twoColumn}>
+          <InputField
+            label="Min Budget"
+            placeholder="Optional"
+            keyboardType="numeric"
+            value={requirementForm.minPrice}
+            onChangeText={(minPrice) => updateRequirementForm({ minPrice })}
+          />
+          <InputField
+            label="Max Budget"
+            placeholder="Optional"
+            keyboardType="numeric"
+            value={requirementForm.maxPrice}
+            onChangeText={(maxPrice) => updateRequirementForm({ maxPrice })}
+          />
+        </View>
+        <Text style={styles.sectionTitle}>Urgency</Text>
+        <View style={styles.chipRow}>
+          {(['Normal', 'Urgent'] as RequirementUrgency[]).map((urgency) => (
+            <TagChip
+              key={urgency}
+              label={urgency}
+              selected={requirementForm.urgency === urgency}
+              onPress={() => updateRequirementForm({ urgency })}
+            />
+          ))}
+        </View>
+        <InputField
+          label="Requirement Details"
+          placeholder="Example: Buyer needs 10 Marla plot in DHA Phase 2, possession preferred..."
+          value={requirementForm.description}
+          onChangeText={(description) => updateRequirementForm({ description })}
+          multiline
+          numberOfLines={4}
+          style={styles.textArea}
+        />
+
+        <View style={styles.previewCard}>
+          <Text style={styles.cardTitle}>Preview</Text>
+          <Text style={styles.previewLine}>
+            {requirementForm.propertyType || 'Property'} in {requirementForm.city || 'City'}
+          </Text>
+          {requirementForm.society ? (
+            <Text style={styles.previewLine}>
+              {requirementForm.society}
+              {requirementForm.phase ? ` - ${requirementForm.phase}` : ''}
+            </Text>
+          ) : null}
+          {requirementForm.size ? (
+            <Text style={styles.previewLine}>
+              Size: {requirementForm.size} {requirementForm.sizeUnit}
+            </Text>
+          ) : null}
+          {(requirementForm.minPrice || requirementForm.maxPrice) ? (
+            <Text style={styles.previewLine}>
+              Budget: {requirementForm.minPrice || 'Any'} - {requirementForm.maxPrice || 'Any'}
+            </Text>
+          ) : null}
+          <TagChip label={requirementForm.urgency} small />
+        </View>
+      </ScrollView>
+      <View style={styles.footer}>
+        {requirementError ? <Text style={styles.error}>{requirementError}</Text> : null}
+        {requirementFeedback ? <Text style={styles.success}>{requirementFeedback}</Text> : null}
+        <View style={styles.footerActions}>
+          <Button title="Back" variant="outline" onPress={openChoice} style={styles.backButton} />
+          <Button
+            title={isPosting ? 'Posting...' : 'Post Requirement'}
+            onPress={handleRequirementSubmit}
+            loading={isPosting}
+            disabled={isPosting}
+            style={styles.nextButton}
+          />
+        </View>
+      </View>
+    </View>
+  );
 
   const renderBasics = () => (
     <>
@@ -926,25 +1280,45 @@ export function PostScreen() {
   return (
     <View style={styles.container}>
       <ScreenHeader
-        title="Post Listing"
-        subtitle="Guided property posting"
+        title={
+          postMode === 'inventory'
+            ? 'Post Inventory'
+            : postMode === 'requirement'
+              ? 'Create Requirement'
+              : 'Post'
+        }
+        subtitle={
+          postMode === 'inventory'
+            ? 'Guided property posting'
+            : postMode === 'requirement'
+              ? 'Post a buyer need'
+              : 'Choose a posting type'
+        }
         left={
-          <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back">
-            <Ionicons name="arrow-back" size={24} color="#fff" />
-          </Pressable>
+          postMode === 'choice' ? null : (
+            <Pressable onPress={openChoice} accessibilityRole="button" accessibilityLabel="Back to post choices">
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </Pressable>
+          )
         }
       />
-      <PostProgress steps={STEPS} currentStep={currentStep} />
-      <PostStepLayout
-        error={formError}
-        isFirst={currentStep === 0}
-        isLast={currentStep === STEPS.length - 1}
-        posting={isPosting}
-        onBack={handleBack}
-        onNext={handleNext}
-      >
-        {renderStep()}
-      </PostStepLayout>
+      {postMode === 'choice' ? renderChoice() : null}
+      {postMode === 'inventory' ? (
+        <>
+          <PostProgress steps={STEPS} currentStep={currentStep} />
+          <PostStepLayout
+            error={formError}
+            isFirst={currentStep === 0}
+            isLast={currentStep === STEPS.length - 1}
+            posting={isPosting}
+            onBack={handleBack}
+            onNext={handleNext}
+          >
+            {renderStep()}
+          </PostStepLayout>
+        </>
+      ) : null}
+      {postMode === 'requirement' ? renderRequirementFlow() : null}
       <BottomSheetSelector
         visible={Boolean(activeSelector)}
         title={selectorTitle}
@@ -962,6 +1336,68 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  choiceBody: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 18,
+  },
+  choicePanel: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    padding: 14,
+  },
+  choiceTitle: {
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 14,
+  },
+  choiceOption: {
+    minHeight: 76,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    padding: 14,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  choiceIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: colors.tagBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  choiceCopy: {
+    flex: 1,
+  },
+  choiceOptionTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 3,
+  },
+  choiceSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  requirementShell: {
+    flex: 1,
+  },
+  stepScroll: {
+    flex: 1,
+  },
+  requirementContent: {
+    padding: 16,
+    paddingBottom: 28,
   },
   sectionTitle: {
     color: colors.primary,
@@ -1112,6 +1548,37 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 8,
     backgroundColor: colors.inputBg,
+  },
+  footer: {
+    padding: 16,
+    paddingBottom: 22,
+    backgroundColor: colors.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  footerActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  backButton: {
+    flex: 0.45,
+  },
+  nextButton: {
+    flex: 1,
+  },
+  error: {
+    color: colors.error,
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  success: {
+    color: colors.success,
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 10,
+    textAlign: 'center',
   },
   descriptionPreview: {
     color: colors.textSecondary,

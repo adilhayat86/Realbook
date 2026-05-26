@@ -33,5 +33,6 @@ export interface Requirement {
   minPrice?: string;
   maxPrice?: string;
   description?: string;
+  urgency?: 'Normal' | 'Urgent';
   createdAt: string;
 }

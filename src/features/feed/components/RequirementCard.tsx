@@ -24,8 +24,15 @@ export function RequirementCard({ requirement }: RequirementCardProps) {
     <View style={styles.cardWrap}>
       <View style={styles.card}>
         <View style={styles.header}>
-          <View style={styles.typeBadge}>
-            <Text style={styles.typeText}>REQ</Text>
+          <View style={styles.badgeRow}>
+            <View style={styles.typeBadge}>
+              <Text style={styles.typeText}>REQ</Text>
+            </View>
+            {requirement.urgency === 'Urgent' ? (
+              <View style={styles.urgentBadge}>
+                <Text style={styles.urgentText}>URGENT</Text>
+              </View>
+            ) : null}
           </View>
           <Text style={styles.date}>
             {new Date(requirement.createdAt).toLocaleDateString()}
@@ -100,6 +107,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   typeBadge: {
     backgroundColor: colors.primary,
     paddingHorizontal: 8,
@@ -107,6 +119,17 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   typeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  urgentBadge: {
+    backgroundColor: colors.error,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  urgentText: {
     color: '#fff',
     fontSize: 10,
     fontWeight: '700',
