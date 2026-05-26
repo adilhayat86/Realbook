@@ -12,6 +12,9 @@ export const MOCK_USER: UserProfile = {
   verified: true,
   status: 'active',
   photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200',
+  officeAddress: 'Office 12, DHA Business Avenue',
+  visitingCardFront: 'Uploaded',
+  visitingCardBack: 'Uploaded',
 };
 
 export const MOCK_LISTINGS: Listing[] = [

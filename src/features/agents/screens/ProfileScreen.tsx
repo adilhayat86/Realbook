@@ -52,6 +52,9 @@ export function ProfileScreen({ navigation, route }: Props) {
   const expertise = 'expertiseAreas' in viewedProfile 
     ? viewedProfile.expertiseAreas?.slice(0, 4).join(' · ') || '' 
     : '';
+  const visitingCardFront =
+    'visitingCardFront' in viewedProfile ? viewedProfile.visitingCardFront : undefined;
+  const hasVisitingCard = Boolean(visitingCardFront);
 
   return (
     <View style={styles.container}>
@@ -111,6 +114,27 @@ export function ProfileScreen({ navigation, route }: Props) {
                 <Text style={styles.statLabel}>Comments</Text>
               </View>
             </View>
+            {hasVisitingCard ? (
+              <View style={styles.visitingCard}>
+                {visitingCardFront && visitingCardFront !== 'Uploaded' ? (
+                  <Image source={{ uri: visitingCardFront }} style={styles.visitingCardImage} />
+                ) : (
+                  <View style={styles.visitingCardMock}>
+                    <View>
+                      <Text style={styles.visitingCardAgency}>{viewedProfile.agency}</Text>
+                      <Text style={styles.visitingCardName}>{viewedProfile.name}</Text>
+                    </View>
+                    <View style={styles.visitingCardDivider} />
+                    <Text style={styles.visitingCardLine}>{viewedProfile.mobile}</Text>
+                    {'officeAddress' in viewedProfile && viewedProfile.officeAddress ? (
+                      <Text style={styles.visitingCardLine} numberOfLines={1}>
+                        {viewedProfile.officeAddress}
+                      </Text>
+                    ) : null}
+                  </View>
+                )}
+              </View>
+            ) : null}
           </View>
         </View>
 
@@ -237,6 +261,47 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     width: '100%',
     maxWidth: 220,
+  },
+  visitingCard: {
+    width: '100%',
+    maxWidth: 280,
+    marginTop: 10,
+  },
+  visitingCardImage: {
+    width: '100%',
+    height: 96,
+    borderRadius: 8,
+    backgroundColor: colors.inputBg,
+  },
+  visitingCardMock: {
+    minHeight: 92,
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: colors.headerBg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.primaryLight,
+    justifyContent: 'center',
+  },
+  visitingCardAgency: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  visitingCardName: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 12,
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  visitingCardDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+    marginVertical: 8,
+  },
+  visitingCardLine: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 11,
+    marginTop: 2,
   },
   stat: {
     flex: 1,

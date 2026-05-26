@@ -8,7 +8,10 @@ export interface AuthUser {
   role: UserRole;
   agency?: string;
   city?: string;
+  officeAddress?: string;
   expertiseAreas?: string[];
+  visitingCardFront?: string;
+  visitingCardBack?: string;
 }
 
 interface StoredAuthUser extends AuthUser {
@@ -21,7 +24,10 @@ export interface SignUpInput {
   passcode: string;
   agency: string;
   city: string;
+  officeAddress?: string;
   expertiseAreas: string[];
+  visitingCardFront?: string;
+  visitingCardBack?: string;
 }
 
 const AUTH_USERS_KEY = 'authUsers';
@@ -65,7 +71,10 @@ export async function loginWithMobile(mobile: string, passcode: string): Promise
     role: isDemoAdmin ? 'admin' : 'verified_agent',
     agency: isDemoAdmin ? 'DealerTribe Admin' : 'Test Agency',
     city: 'Rawalpindi',
+    officeAddress: isDemoAdmin ? 'Admin Office' : 'Demo Office',
     expertiseAreas: ['Bahria Town', 'DHA'],
+    visitingCardFront: 'Uploaded',
+    visitingCardBack: 'Uploaded',
   };
 }
 
@@ -86,7 +95,10 @@ export async function registerWithMobile(input: SignUpInput): Promise<AuthUser |
     role: 'pending_agent',
     agency: input.agency.trim(),
     city: input.city.trim(),
+    officeAddress: input.officeAddress?.trim(),
     expertiseAreas: input.expertiseAreas,
+    visitingCardFront: input.visitingCardFront,
+    visitingCardBack: input.visitingCardBack,
   };
   const withoutDuplicate = storedUsers.filter((user) => user.mobile !== normalizedMobile);
   await setStoredValue(AUTH_USERS_KEY, [...withoutDuplicate, nextUser]);

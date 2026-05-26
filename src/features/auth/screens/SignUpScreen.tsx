@@ -107,7 +107,10 @@ export function SignUpScreen() {
         passcode: password,
         agency,
         city,
+        officeAddress,
         expertiseAreas,
+        visitingCardFront,
+        visitingCardBack,
       });
       setSubmitting(false);
       if (!ok) {

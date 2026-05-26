@@ -6,10 +6,13 @@ export interface UserProfile {
   mobile: string;
   agency: string;
   city: string;
+  officeAddress?: string;
   bio: string;
   expertiseAreas: string[];
   role: UserRole;
   verified: boolean;
   status: string;
   photo?: string;
+  visitingCardFront?: string;
+  visitingCardBack?: string;
 }
