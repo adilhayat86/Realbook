@@ -12,6 +12,7 @@ import { ProfileScreen } from '@/features/agents/screens/ProfileScreen';
 import { EditProfileScreen } from '@/features/agents/screens/EditProfileScreen';
 import { ListingDetailScreen } from '@/features/properties/screens/ListingDetailScreen';
 import { CommentsScreen } from '@/features/properties/screens/CommentsScreen';
+import { useAuth } from '@/context/AuthContext';
 import { ProfileStackParamList } from './types';
 import { colors } from '@/theme/colors';
 
@@ -29,9 +30,15 @@ function ProfileNavigator() {
   );
 }
 
+function AdminNavigator() {
+  return <FeedNavigator route={{ params: { initialRouteName: 'Admin' } }} />;
+}
+
 const TAB_BAR_CONTENT_HEIGHT = 56;
 
 export function MainTabs() {
+  const { role } = useAuth();
+  const isAdmin = role === 'admin';
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(
     insets.bottom,
@@ -41,6 +48,7 @@ export function MainTabs() {
 
   return (
     <Tab.Navigator
+      initialRouteName={isAdmin ? 'Admin' : 'Feed'}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
@@ -62,6 +70,7 @@ export function MainTabs() {
             Search: focused ? 'search' : 'search-outline',
             Post: focused ? 'add-circle' : 'add-circle-outline',
             Agents: focused ? 'people' : 'people-outline',
+            Admin: focused ? 'shield-checkmark' : 'shield-checkmark-outline',
             Profile: focused ? 'person' : 'person-outline',
           };
           return (
@@ -78,11 +87,19 @@ export function MainTabs() {
         options={{ tabBarLabel: 'Post' }}
       />
       <Tab.Screen name="Agents" component={AgentsScreen} />
-      <Tab.Screen
-        name="Profile"
-        component={ProfileNavigator}
-        options={{ tabBarLabel: 'Profile' }}
-      />
+      {isAdmin ? (
+        <Tab.Screen
+          name="Admin"
+          component={AdminNavigator}
+          options={{ tabBarLabel: 'Admin' }}
+        />
+      ) : (
+        <Tab.Screen
+          name="Profile"
+          component={ProfileNavigator}
+          options={{ tabBarLabel: 'Profile' }}
+        />
+      )}
     </Tab.Navigator>
   );
 }
