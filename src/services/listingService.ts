@@ -4,7 +4,72 @@ import { Listing, PostFormData, UserProfile } from '@/types';
 
 const LISTINGS_KEY = 'listings';
 
+function cleanText(value?: string): string {
+  return String(value ?? '').trim();
+}
+
+function cleanNumberText(value?: string): string {
+  return String(value ?? '').replace(/[^0-9]/g, '');
+}
+
+function parseMoney(value?: string): number {
+  return parseInt(cleanNumberText(value), 10) || 0;
+}
+
+function validateListingInput(data: PostFormData): string[] {
+  const errors: string[] = [];
+
+  if (!cleanText(data.propertyType)) errors.push('Property type is required.');
+  if (!cleanText(data.city)) errors.push('City is required.');
+  if (!cleanText(data.society)) errors.push('Society is required.');
+  if (!cleanText(data.phase)) errors.push('Phase or sector is required.');
+  if (parseMoney(data.price) <= 0) errors.push('Price must be greater than zero.');
+
+  if (data.propertyType === 'Pair Plot') {
+    if (!cleanText(data.plotNumberOne)) errors.push('Plot 1 number is required.');
+    if (!cleanText(data.plotNumberTwo)) errors.push('Plot 2 number is required.');
+    if (!cleanText(data.sizeEach)) errors.push('Size each is required.');
+    if (!cleanText(data.totalSize)) errors.push('Total size is required.');
+  } else if (!cleanText(data.size)) {
+    errors.push('Size is required.');
+  }
+
+  return errors;
+}
+
+function normalizeListingInput(data: PostFormData): PostFormData {
+  return {
+    ...data,
+    society: cleanText(data.society),
+    phase: cleanText(data.phase),
+    block: cleanText(data.block),
+    price: cleanNumberText(data.price),
+    size: cleanText(data.size),
+    sizeUnit: data.sizeUnit || 'Marla',
+    possessionStatus: cleanText(data.possessionStatus),
+    registryStatus: cleanText(data.registryStatus),
+    mapStatus: cleanText(data.mapStatus),
+    duesStatus: cleanText(data.duesStatus),
+    nocStatus: cleanText(data.nocStatus),
+    tags: Array.from(new Set(data.tags ?? [])),
+    description: cleanText(data.description),
+    images: data.images ?? [],
+    plotNumberOne: cleanText(data.plotNumberOne),
+    plotNumberTwo: cleanText(data.plotNumberTwo),
+    streetNumber: cleanText(data.streetNumber),
+    sizeEach: cleanText(data.sizeEach),
+    totalSize: cleanText(data.totalSize),
+  };
+}
+
 function toListing(data: PostFormData, profile: UserProfile = MOCK_USER): Listing {
+  const normalizedData = normalizeListingInput(data);
+  const errors = validateListingInput(normalizedData);
+
+  if (errors.length > 0) {
+    throw new Error(`Invalid listing: ${errors.join(' ')}`);
+  }
+
   const {
     propertyType,
     city,
@@ -23,7 +88,7 @@ function toListing(data: PostFormData, profile: UserProfile = MOCK_USER): Listin
     description,
     images,
     ...propertySpecificFields
-  } = data;
+  } = normalizedData;
 
   return {
     id: `l${Date.now()}`,
@@ -37,7 +102,7 @@ function toListing(data: PostFormData, profile: UserProfile = MOCK_USER): Listin
     society,
     phase,
     block,
-    price: parseInt(price.replace(/\D/g, ''), 10) || 0,
+    price: parseMoney(price),
     size,
     sizeUnit,
     possessionStatus: possessionStatus as Listing['possessionStatus'],
