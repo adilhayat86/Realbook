@@ -20,8 +20,24 @@ export function VirtualKeyboard({
   onChangeText,
   onDone,
 }: VirtualKeyboardProps) {
-  const append = (text: string) => onChangeText(`${value}${text}`);
-  const backspace = () => onChangeText(value.slice(0, -1));
+  const [draftValue, setDraftValue] = React.useState(value);
+  const draftRef = React.useRef(value);
+  const onChangeRef = React.useRef(onChangeText);
+  onChangeRef.current = onChangeText;
+
+  React.useEffect(() => {
+    draftRef.current = value;
+    setDraftValue(value);
+  }, [value]);
+
+  const setValue = (nextValue: string) => {
+    draftRef.current = nextValue;
+    setDraftValue(nextValue);
+    onChangeRef.current(nextValue);
+  };
+
+  const append = (text: string) => setValue(`${draftRef.current}${text}`);
+  const backspace = () => setValue(draftRef.current.slice(0, -1));
 
   return (
     <View style={styles.keyboard}>
@@ -59,7 +75,7 @@ export function VirtualKeyboard({
         </Pressable>
         <Pressable
           style={[styles.key, styles.actionKey]}
-          onPress={() => onChangeText('')}
+          onPress={() => setValue('')}
           accessibilityRole="button"
           accessibilityLabel="Keyboard clear"
         >
@@ -89,6 +105,7 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 6,
     marginBottom: 6,

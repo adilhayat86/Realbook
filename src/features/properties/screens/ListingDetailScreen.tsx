@@ -44,7 +44,9 @@ export function ListingDetailScreen({ navigation, route }: Props) {
     nav.navigate('ProfileMain', { agentId: listing.agentId });
   };
 
-  const expertiseAreas = listing.agentExpertise.slice(0, 2).join(' · ');
+  const expertiseAreas = listing.agentExpertise.slice(0, 2).join(' - ');
+  const isPairPlot = listing.propertyType === 'Pair Plot';
+  const hasPairPlotNumbers = Boolean(listing.plotNumberOne && listing.plotNumberTwo);
 
   return (
     <View style={styles.container}>
@@ -132,6 +134,45 @@ export function ListingDetailScreen({ navigation, route }: Props) {
               <Text style={styles.detailLabel}>Block:</Text>
               <Text style={styles.detailValue}>{listing.block}</Text>
             </View>
+          )}
+
+          {isPairPlot && (
+            <>
+              <View style={styles.divider} />
+              <Text style={styles.sectionTitle}>Pair Plot Details</Text>
+              {hasPairPlotNumbers ? (
+                <>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Plot Numbers:</Text>
+                    <Text style={styles.detailValue}>
+                      {listing.plotNumberOne} & {listing.plotNumberTwo}
+                    </Text>
+                  </View>
+                  {listing.streetNumber && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Street Number:</Text>
+                      <Text style={styles.detailValue}>{listing.streetNumber}</Text>
+                    </View>
+                  )}
+                  {listing.sizeEach && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Size Each:</Text>
+                      <Text style={styles.detailValue}>
+                        {listing.sizeEach} {listing.sizeEachUnit || listing.sizeUnit}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Total Size:</Text>
+                    <Text style={styles.detailValue}>
+                      {listing.totalSize || listing.size} {listing.totalSizeUnit || listing.sizeUnit}
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <Text style={styles.pairFallback}>Two adjacent/in-row plots</Text>
+              )}
+            </>
           )}
 
           <View style={styles.divider} />
@@ -343,6 +384,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text,
     fontWeight: '600',
+    flexShrink: 1,
+    textAlign: 'right',
+    marginLeft: 12,
+  },
+  pairFallback: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
   },
   sectionTitle: {
     fontSize: 16,

@@ -11,9 +11,10 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export function AppNavigator() {
   const { isLoggedIn } = useAuth();
+  const navigationKey = isLoggedIn ? 'main' : 'auth';
 
   return (
-    <NavigationContainer>
+    <NavigationContainer key={navigationKey}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isLoggedIn ? (
           <Stack.Screen name="Main" component={MainTabs} />

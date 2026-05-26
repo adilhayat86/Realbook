@@ -46,6 +46,8 @@ export function AdminScreen({ navigation }: any) {
     { label: 'Manage Users', icon: 'people-outline', screen: 'AdminUsers' },
     { label: 'Manage Listings', icon: 'home-outline', screen: 'AdminListings' },
     { label: 'Reports', icon: 'flag-outline', screen: 'AdminReports' },
+    { label: 'Post Requirement', icon: 'megaphone-outline', screen: 'Requirements' },
+    { label: 'Record Room', icon: 'archive-outline', screen: 'RecordRoom' },
     { label: 'Settings', icon: 'settings-outline', screen: 'Settings' },
   ];
 

@@ -49,12 +49,13 @@ export function RequirementCard({ requirement }: RequirementCardProps) {
 
         <Text style={styles.propertyType}>{requirement.propertyType}</Text>
         <Text style={styles.location}>
-          {requirement.city} · {requirement.area}
+          {requirement.city} - {requirement.area}
         </Text>
         {requirement.society && (
           <Text style={styles.society}>
-            {requirement.society} {requirement.phase ? `· ${requirement.phase}` : ''}{' '}
-            {requirement.block ? `· ${requirement.block}` : ''}
+            {requirement.society}
+            {requirement.phase ? ` - ${requirement.phase}` : ''}
+            {requirement.block ? ` - ${requirement.block}` : ''}
           </Text>
         )}
         {requirement.size && (

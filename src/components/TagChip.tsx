@@ -27,6 +27,9 @@ export function TagChip({ label, selected, onPress, small }: TagChipProps) {
       <Pressable
         onPress={onPress}
         style={[styles.chip, selected && styles.chipSelected, small && styles.chipSmall]}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ selected: Boolean(selected) }}
       >
         {content}
       </Pressable>
@@ -34,7 +37,12 @@ export function TagChip({ label, selected, onPress, small }: TagChipProps) {
   }
 
   return (
-    <Pressable style={[styles.chip, styles.chipStatic, small && styles.chipSmall]} disabled>
+    <Pressable
+      style={[styles.chip, styles.chipStatic, small && styles.chipSmall]}
+      disabled
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: true }}
+    >
       {content}
     </Pressable>
   );

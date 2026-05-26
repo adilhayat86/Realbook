@@ -17,8 +17,11 @@ interface InputFieldProps extends TextInputProps {
   error?: string;
 }
 
+const keyboardListeners = new Map<string, (activeId: string) => void>();
+
 export function InputField({ label, error, style, ...props }: InputFieldProps) {
   const [showKeyboard, setShowKeyboard] = React.useState(false);
+  const keyboardId = React.useId();
   const keyboardValue = typeof props.value === 'string' ? props.value : '';
   const handleKeyboardChange = props.onChangeText;
   const canUseVirtualKeyboard =
@@ -26,6 +29,25 @@ export function InputField({ label, error, style, ...props }: InputFieldProps) {
     props.editable !== false &&
     typeof props.value === 'string' &&
     typeof handleKeyboardChange === 'function';
+
+  React.useEffect(() => {
+    keyboardListeners.set(keyboardId, (activeId) => {
+      setShowKeyboard(activeId === keyboardId);
+    });
+
+    return () => {
+      keyboardListeners.delete(keyboardId);
+    };
+  }, [keyboardId]);
+
+  const toggleKeyboard = () => {
+    if (showKeyboard) {
+      setShowKeyboard(false);
+      return;
+    }
+
+    keyboardListeners.forEach((listener) => listener(keyboardId));
+  };
 
   return (
     <View style={styles.wrapper}>
@@ -44,7 +66,7 @@ export function InputField({ label, error, style, ...props }: InputFieldProps) {
         {canUseVirtualKeyboard ? (
           <Pressable
             style={styles.keyboardButton}
-            onPress={() => setShowKeyboard((visible) => !visible)}
+            onPress={toggleKeyboard}
             accessibilityRole="button"
             accessibilityLabel={`Open keyboard for ${label}`}
           >
@@ -55,6 +77,7 @@ export function InputField({ label, error, style, ...props }: InputFieldProps) {
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {canUseVirtualKeyboard && showKeyboard ? (
         <VirtualKeyboard
+          key={`${label}-${keyboardId}`}
           value={keyboardValue}
           onChangeText={handleKeyboardChange as (text: string) => void}
           onDone={() => setShowKeyboard(false)}

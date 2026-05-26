@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
+  Image,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
-  Platform,
-  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,21 +18,29 @@ import { useApp } from '@/context/AppContext';
 import { useAuth } from '@/context/AuthContext';
 import {
   CITIES,
-  PROPERTY_TYPES,
-  SPECIAL_TAGS,
-  SIZE_UNITS,
-  TWIN_CITIES_AREAS,
-  getSocieties,
-  getPhasesForSociety,
-  getBlocksForPhase,
-  POSSESSION_STATUS,
-  REGISTRY_STATUS,
-  MAP_STATUS,
   DUES_STATUS,
+  MAP_STATUS,
   NOC_STATUS,
+  POSSESSION_STATUS,
+  PROPERTY_TYPES,
+  REGISTRY_STATUS,
+  SIZE_UNITS,
+  SPECIAL_TAGS,
+  getBlocksForPhase,
+  getPhasesForSociety,
+  getSocieties,
 } from '@/constants/societies';
-import { PostFormData, PropertyType, SpecialTag, City } from '@/types';
+import { City, PostFormData, PropertyType, SpecialTag } from '@/types';
 import { colors } from '@/theme/colors';
+import {
+  BottomSheetSelector,
+  ExpandableSection,
+  OptionCard,
+  PostProgress,
+  PostStepLayout,
+  SelectorButton,
+  UnitInput,
+} from '@/features/properties/components/PostWizardComponents';
 
 const initialForm: PostFormData = {
   propertyType: '',
@@ -51,10 +59,16 @@ const initialForm: PostFormData = {
   tags: [],
   description: '',
   images: [],
-  // Property-specific fields
   level: '',
   facing: '',
   streetWidth: '',
+  plotNumberOne: '',
+  plotNumberTwo: '',
+  streetNumber: '',
+  sizeEach: '',
+  sizeEachUnit: 'Kanal',
+  totalSize: '',
+  totalSizeUnit: 'Kanal',
   corner: false,
   parkFacing: false,
   mainBoulevard: false,
@@ -102,24 +116,92 @@ const initialForm: PostFormData = {
   views: [],
 };
 
-const STEPS = ['Post Listing'];
+const STEPS = [
+  { title: 'Property Basics', shortTitle: 'Basics' },
+  { title: 'Price & Area', shortTitle: 'Price' },
+  { title: 'Property Features', shortTitle: 'Features' },
+  { title: 'Photos & Description', shortTitle: 'Photos' },
+  { title: 'Preview & Submit', shortTitle: 'Preview' },
+];
+
+const QUICK_PROPERTY_TYPES: Array<{ label: string; value: PropertyType; icon: keyof typeof Ionicons.glyphMap }> = [
+  { label: 'Plot', value: 'Residential Plot', icon: 'map-outline' },
+  { label: 'Pair Plot', value: 'Pair Plot', icon: 'layers-outline' },
+  { label: 'House', value: 'House', icon: 'home-outline' },
+];
+
+const FEATURE_TAGS: SpecialTag[] = [
+  'Corner',
+  'Park Facing',
+  'Main Boulevard',
+  'On Biana',
+  'Direct Owner',
+  'Merging Possible',
+  'Gated',
+  'Sun Facing',
+];
+
+const SELECTOR_OPTIONS = {
+  propertyType: PROPERTY_TYPES,
+  city: CITIES,
+  sizeUnit: SIZE_UNITS,
+  possessionStatus: POSSESSION_STATUS,
+  registryStatus: REGISTRY_STATUS,
+  mapStatus: MAP_STATUS,
+  duesStatus: DUES_STATUS,
+  nocStatus: NOC_STATUS,
+};
+
+type SelectorKey =
+  | 'propertyType'
+  | 'city'
+  | 'society'
+  | 'phase'
+  | 'block'
+  | 'sizeUnit'
+  | 'sizeEachUnit'
+  | 'totalSizeUnit'
+  | 'possessionStatus'
+  | 'registryStatus'
+  | 'mapStatus'
+  | 'duesStatus'
+  | 'nocStatus';
 
 export function PostScreen() {
-  const { addListing, profile } = useApp();
+  const { addListing } = useApp();
   const { role } = useAuth();
   const navigation = useNavigation();
+  const [currentStep, setCurrentStep] = useState(0);
   const [form, setForm] = useState<PostFormData>(initialForm);
   const [formError, setFormError] = useState('');
   const [isPosting, setIsPosting] = useState(false);
+  const [activeSelector, setActiveSelector] = useState<SelectorKey | null>(null);
 
-  const requiredFields: Array<[keyof PostFormData, string]> = [
-    ['propertyType', 'property type'],
-    ['size', 'size'],
-    ['city', 'city'],
-    ['society', 'society'],
-    ['phase', 'phase / sector'],
-    ['price', 'price'],
-  ];
+  const isPairPlot = form.propertyType === 'Pair Plot';
+  const isPlot = form.propertyType === 'Residential Plot' || form.propertyType === 'Pair Plot';
+  const isHouse = form.propertyType === 'House' || form.propertyType === 'Farm House';
+  const isCommercial =
+    form.propertyType === 'Commercial Plot' ||
+    form.propertyType === 'Shop' ||
+    form.propertyType === 'Office' ||
+    form.propertyType === 'Industrial Plot';
+  const isApartment = form.propertyType === 'Apartment / Flat' || form.propertyType === 'Penthouse';
+
+  const societies = useMemo(
+    () => (form.city ? getSocieties(form.city as City) : []),
+    [form.city]
+  );
+  const phases = useMemo(
+    () => (form.city && form.society ? getPhasesForSociety(form.city as City, form.society) : []),
+    [form.city, form.society]
+  );
+  const blocks = useMemo(
+    () =>
+      form.city && form.society && form.phase
+        ? getBlocksForPhase(form.city as City, form.society, form.phase)
+        : [],
+    [form.city, form.society, form.phase]
+  );
 
   const cannotPost = role === 'guest' || role === 'pending_agent' || role === 'banned';
 
@@ -152,7 +234,7 @@ export function PostScreen() {
           title="Post Listing"
           subtitle={blockedCopy.subtitle}
           left={
-            <Pressable onPress={() => navigation.goBack()}>
+            <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back">
               <Ionicons name="arrow-back" size={24} color="#fff" />
             </Pressable>
           }
@@ -160,9 +242,7 @@ export function PostScreen() {
         <View style={styles.guestContainer}>
           <Ionicons name="lock-closed" size={64} color={colors.textMuted} />
           <Text style={styles.guestTitle}>{blockedCopy.title}</Text>
-          <Text style={styles.guestText}>
-            {blockedCopy.text}
-          </Text>
+          <Text style={styles.guestText}>{blockedCopy.text}</Text>
           <Button
             title={blockedCopy.button}
             onPress={() =>
@@ -177,23 +257,66 @@ export function PostScreen() {
     );
   }
 
+  const updateForm = (patch: Partial<PostFormData>) => {
+    setForm((prev) => ({ ...prev, ...patch }));
+  };
+
+  const selectPropertyType = (propertyType: PropertyType) => {
+    setForm((prev) => ({
+      ...prev,
+      propertyType,
+      ...(propertyType === 'Pair Plot'
+        ? {
+            size: prev.totalSize || '',
+            sizeUnit: prev.totalSizeUnit || prev.sizeUnit,
+            sizeEachUnit: prev.sizeEachUnit || 'Kanal',
+            totalSizeUnit: prev.totalSizeUnit || prev.sizeUnit,
+          }
+        : {
+            plotNumberOne: '',
+            plotNumberTwo: '',
+            streetNumber: '',
+            sizeEach: '',
+            sizeEachUnit: 'Kanal',
+            totalSize: '',
+            totalSizeUnit: 'Kanal',
+          }),
+    }));
+  };
+
+  const setPairTotalSize = (totalSize: string) => {
+    updateForm({ totalSize, size: totalSize });
+  };
+
+  const setPairTotalSizeUnit = (totalSizeUnit: string) => {
+    updateForm({ totalSizeUnit, sizeUnit: totalSizeUnit });
+  };
+
+  const toggleTag = (tag: SpecialTag) => {
+    setForm((prev) => ({
+      ...prev,
+      tags: prev.tags.includes(tag)
+        ? prev.tags.filter((item) => item !== tag)
+        : [...prev.tags, tag],
+    }));
+  };
+
   const handleAddImage = () => {
     if (Platform.OS === 'web') {
-      // Web: trigger hidden file input
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = 'image/*';
       input.multiple = true;
-      input.onchange = (e) => {
-        const files = (e.target as HTMLInputElement).files;
+      input.onchange = (event) => {
+        const files = (event.target as HTMLInputElement).files;
         if (files) {
           Array.from(files).forEach((file) => {
             const reader = new FileReader();
-            reader.onload = (event) => {
-              if (event.target?.result) {
+            reader.onload = (readerEvent) => {
+              if (readerEvent.target?.result) {
                 setForm((prev) => ({
                   ...prev,
-                  images: [...prev.images, event.target!.result as string],
+                  images: [...prev.images, readerEvent.target!.result as string],
                 }));
               }
             };
@@ -203,43 +326,62 @@ export function PostScreen() {
       };
       input.click();
     } else {
-      // Native: use mock for now (would use expo-image-picker in production)
       const mockImages = ['https://via.placeholder.com/300', 'https://via.placeholder.com/300'];
       const newImage = mockImages[Math.floor(Math.random() * mockImages.length)];
-      setForm((prev) => ({
-        ...prev,
-        images: [...prev.images, newImage],
-      }));
+      updateForm({ images: [...form.images, newImage] });
     }
   };
 
   const handleRemoveImage = (index: number) => {
-    setForm((prev) => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index),
-    }));
+    updateForm({ images: form.images.filter((_, itemIndex) => itemIndex !== index) });
   };
 
-  const toggleTag = (tag: SpecialTag) => {
-    setForm((prev) => ({
-      ...prev,
-      tags: prev.tags.includes(tag)
-        ? prev.tags.filter((t) => t !== tag)
-        : [...prev.tags, tag],
-    }));
+  const validateStep = (step = currentStep): string => {
+    if (step === 0) {
+      if (!form.propertyType) return 'Please select a property type.';
+      if (!form.city) return 'Please select a city.';
+      if (!form.society) return 'Please select a society.';
+      if (!form.phase) return 'Please select a phase or sector.';
+    }
+
+    if (step === 1) {
+      if (!form.price) return 'Please add price before continuing.';
+      if (isPairPlot) {
+        if (!form.plotNumberOne) return 'Please add plot 1 number.';
+        if (!form.plotNumberTwo) return 'Please add plot 2 number.';
+        if (!form.sizeEach) return 'Please add size each.';
+        if (!form.totalSize) return 'Please add total size.';
+      } else if (!form.size) {
+        return 'Please add property size.';
+      }
+    }
+
+    return '';
   };
 
-  const handlePost = () => {
-    const missing = requiredFields.find(([field]) => !form[field]);
-    if (missing) {
-      setFormError(`Please add ${missing[1]} before posting.`);
+  const handleNext = () => {
+    const error = validateStep();
+    if (error) {
+      setFormError(error);
       return;
     }
 
     setFormError('');
+    if (currentStep < STEPS.length - 1) {
+      setCurrentStep((step) => step + 1);
+      return;
+    }
+
+    const finalError = validateStep(0) || validateStep(1);
+    if (finalError) {
+      setFormError(finalError);
+      return;
+    }
+
     setIsPosting(true);
     addListing(form);
     setForm(initialForm);
+    setCurrentStep(0);
 
     setTimeout(() => {
       setIsPosting(false);
@@ -247,474 +389,571 @@ export function PostScreen() {
     }, 250);
   };
 
+  const handleBack = () => {
+    setFormError('');
+    setCurrentStep((step) => Math.max(0, step - 1));
+  };
+
+  const selectOption = (value: string) => {
+    if (!activeSelector) return;
+
+    if (activeSelector === 'propertyType') {
+      selectPropertyType(value as PropertyType);
+    } else if (activeSelector === 'city') {
+      updateForm({ city: value as City, society: '', phase: '', block: '' });
+    } else if (activeSelector === 'society') {
+      updateForm({ society: value, phase: '', block: '' });
+    } else if (activeSelector === 'phase') {
+      updateForm({ phase: value, block: '' });
+    } else if (activeSelector === 'block') {
+      updateForm({ block: value });
+    } else if (activeSelector === 'sizeUnit') {
+      updateForm({ sizeUnit: value });
+    } else if (activeSelector === 'sizeEachUnit') {
+      updateForm({ sizeEachUnit: value });
+    } else if (activeSelector === 'totalSizeUnit') {
+      setPairTotalSizeUnit(value);
+    } else {
+      updateForm({ [activeSelector]: value });
+    }
+
+    setActiveSelector(null);
+  };
+
+  const selectorOptions = (() => {
+    switch (activeSelector) {
+      case 'propertyType':
+        return SELECTOR_OPTIONS.propertyType;
+      case 'city':
+        return SELECTOR_OPTIONS.city;
+      case 'society':
+        return societies;
+      case 'phase':
+        return phases;
+      case 'block':
+        return blocks;
+      case 'sizeUnit':
+      case 'sizeEachUnit':
+      case 'totalSizeUnit':
+        return SELECTOR_OPTIONS.sizeUnit;
+      case 'possessionStatus':
+        return SELECTOR_OPTIONS.possessionStatus;
+      case 'registryStatus':
+        return SELECTOR_OPTIONS.registryStatus;
+      case 'mapStatus':
+        return SELECTOR_OPTIONS.mapStatus;
+      case 'duesStatus':
+        return SELECTOR_OPTIONS.duesStatus;
+      case 'nocStatus':
+        return SELECTOR_OPTIONS.nocStatus;
+      default:
+        return [];
+    }
+  })();
+
+  const selectorValue = activeSelector ? String(form[activeSelector as keyof PostFormData] || '') : '';
+  const selectorTitle = activeSelector
+    ? activeSelector
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, (letter) => letter.toUpperCase())
+    : '';
+  const selectorSearchable = activeSelector === 'society' || activeSelector === 'phase' || activeSelector === 'block';
+
+  const renderBasics = () => (
+    <>
+      <Text style={styles.sectionTitle}>What are you listing?</Text>
+      <View style={styles.quickTypeRow}>
+        {QUICK_PROPERTY_TYPES.map((item) => (
+          <OptionCard
+            key={item.value}
+            label={item.label}
+            icon={item.icon}
+            selected={form.propertyType === item.value}
+            onPress={() => selectPropertyType(item.value)}
+          />
+        ))}
+      </View>
+      <SelectorButton
+        label="Property Type"
+        value={form.propertyType}
+        placeholder="Select property type"
+        onPress={() => setActiveSelector('propertyType')}
+      />
+      <View style={styles.locationCard}>
+        <Text style={styles.cardTitle}>Location</Text>
+        <SelectorButton
+          label="City"
+          value={form.city}
+          placeholder="Select city"
+          onPress={() => setActiveSelector('city')}
+        />
+        <SelectorButton
+          label="Society"
+          value={form.society}
+          placeholder={form.city ? 'Select society' : 'Select city first'}
+          disabled={!form.city}
+          onPress={() => setActiveSelector('society')}
+        />
+        <SelectorButton
+          label="Phase / Sector"
+          value={form.phase}
+          placeholder={form.society ? 'Select phase or sector' : 'Select society first'}
+          disabled={!form.society}
+          onPress={() => setActiveSelector('phase')}
+        />
+        <SelectorButton
+          label="Block"
+          value={form.block}
+          placeholder={form.phase ? 'Select block if available' : 'Select phase first'}
+          disabled={!form.phase || blocks.length === 0}
+          onPress={() => setActiveSelector('block')}
+        />
+      </View>
+    </>
+  );
+
+  const renderPriceAndArea = () => (
+    <>
+      <InputField
+        label="Price (Rs)"
+        placeholder="e.g. 18500000"
+        keyboardType="numeric"
+        value={form.price}
+        onChangeText={(price) => updateForm({ price })}
+      />
+      {isPairPlot ? (
+        <View style={styles.locationCard}>
+          <Text style={styles.cardTitle}>Pair Plot Area</Text>
+          <Text style={styles.helperText}>Two adjacent or in-row plots sold together.</Text>
+          <View style={styles.twoColumn}>
+            <InputField
+              label="Plot 1 Number"
+              placeholder="23"
+              value={form.plotNumberOne || ''}
+              onChangeText={(plotNumberOne) => updateForm({ plotNumberOne })}
+            />
+            <InputField
+              label="Plot 2 Number"
+              placeholder="24"
+              value={form.plotNumberTwo || ''}
+              onChangeText={(plotNumberTwo) => updateForm({ plotNumberTwo })}
+            />
+          </View>
+          <InputField
+            label="Street Number"
+            placeholder="e.g. 24"
+            value={form.streetNumber || ''}
+            onChangeText={(streetNumber) => updateForm({ streetNumber })}
+          />
+          <UnitInput
+            label="Size Each"
+            value={form.sizeEach || ''}
+            unit={form.sizeEachUnit || 'Kanal'}
+            placeholder="1"
+            onChangeText={(sizeEach) => updateForm({ sizeEach })}
+            onUnitPress={() => setActiveSelector('sizeEachUnit')}
+          />
+          <UnitInput
+            label="Total Size"
+            value={form.totalSize || ''}
+            unit={form.totalSizeUnit || 'Kanal'}
+            placeholder="2"
+            onChangeText={setPairTotalSize}
+            onUnitPress={() => setActiveSelector('totalSizeUnit')}
+          />
+        </View>
+      ) : (
+        <UnitInput
+          label="Size"
+          value={form.size}
+          unit={form.sizeUnit}
+          placeholder="10"
+          onChangeText={(size) => updateForm({ size })}
+          onUnitPress={() => setActiveSelector('sizeUnit')}
+        />
+      )}
+    </>
+  );
+
+  const renderPropertySpecificFields = () => {
+    if (isPlot) {
+      return (
+        <ExpandableSection title={isPairPlot ? 'Plot Condition' : 'Plot Details'} defaultOpen>
+          <InputField
+            label="Level"
+            placeholder="Level / Raised / Lowered"
+            value={form.level || ''}
+            onChangeText={(level) => updateForm({ level })}
+          />
+          <InputField
+            label="Facing"
+            placeholder="North / South / East / West"
+            value={form.facing || ''}
+            onChangeText={(facing) => updateForm({ facing })}
+          />
+          <InputField
+            label="Street Width (feet)"
+            placeholder="40"
+            keyboardType="numeric"
+            value={form.streetWidth || ''}
+            onChangeText={(streetWidth) => updateForm({ streetWidth })}
+          />
+        </ExpandableSection>
+      );
+    }
+
+    if (isHouse) {
+      return (
+        <ExpandableSection title="House Details" defaultOpen>
+          <InputField
+            label="Construction"
+            placeholder="Brand New / Used"
+            value={form.construction || ''}
+            onChangeText={(construction) => updateForm({ construction })}
+          />
+          <InputField
+            label="Quality"
+            placeholder="Grey / Partially / Fully finished"
+            value={form.quality || ''}
+            onChangeText={(quality) => updateForm({ quality })}
+          />
+          <InputField
+            label="Furnished"
+            placeholder="Furnished / Semi / Unfurnished"
+            value={form.furnished || ''}
+            onChangeText={(furnished) => updateForm({ furnished })}
+          />
+          <View style={styles.twoColumn}>
+            <InputField
+              label="Floors"
+              placeholder="2"
+              keyboardType="numeric"
+              value={form.floors ? String(form.floors) : ''}
+              onChangeText={(floors) => updateForm({ floors: parseInt(floors, 10) || undefined })}
+            />
+            <InputField
+              label="Years Old"
+              placeholder="5"
+              keyboardType="numeric"
+              value={form.yearsOld ? String(form.yearsOld) : ''}
+              onChangeText={(yearsOld) => updateForm({ yearsOld: parseInt(yearsOld, 10) || undefined })}
+            />
+          </View>
+        </ExpandableSection>
+      );
+    }
+
+    if (isCommercial) {
+      return (
+        <ExpandableSection title="Commercial Details" defaultOpen>
+          <InputField
+            label="Approval"
+            placeholder="CDA / RDA / DHA / Bahria / Unapproved"
+            value={form.approval || ''}
+            onChangeText={(approval) => updateForm({ approval })}
+          />
+          <InputField
+            label="Commercial Activity"
+            placeholder="Market / Main road / Office area"
+            value={form.commercialActivity || ''}
+            onChangeText={(commercialActivity) => updateForm({ commercialActivity })}
+          />
+          <InputField
+            label="Rental Income"
+            placeholder="Optional"
+            keyboardType="numeric"
+            value={form.rentalIncome || ''}
+            onChangeText={(rentalIncome) => updateForm({ rentalIncome })}
+          />
+        </ExpandableSection>
+      );
+    }
+
+    if (isApartment) {
+      return (
+        <ExpandableSection title="Apartment Details" defaultOpen>
+          <View style={styles.twoColumn}>
+            <InputField
+              label="Floor Number"
+              placeholder="3"
+              keyboardType="numeric"
+              value={form.floorNumber ? String(form.floorNumber) : ''}
+              onChangeText={(floorNumber) => updateForm({ floorNumber: parseInt(floorNumber, 10) || undefined })}
+            />
+            <InputField
+              label="Total Floors"
+              placeholder="10"
+              keyboardType="numeric"
+              value={form.totalFloors ? String(form.totalFloors) : ''}
+              onChangeText={(totalFloors) => updateForm({ totalFloors: parseInt(totalFloors, 10) || undefined })}
+            />
+          </View>
+          <InputField
+            label="Parking Spots"
+            placeholder="1"
+            keyboardType="numeric"
+            value={form.parking ? String(form.parking) : ''}
+            onChangeText={(parking) => updateForm({ parking: parseInt(parking, 10) || undefined })}
+          />
+          {form.propertyType === 'Penthouse' ? (
+            <InputField
+              label="Rooftop Area (sqft)"
+              placeholder="500"
+              keyboardType="numeric"
+              value={form.rooftopArea || ''}
+              onChangeText={(rooftopArea) => updateForm({ rooftopArea })}
+            />
+          ) : null}
+        </ExpandableSection>
+      );
+    }
+
+    return null;
+  };
+
+  const renderFeatures = () => (
+    <>
+      <Text style={styles.sectionTitle}>Quick Features</Text>
+      <View style={styles.chipRow}>
+        {FEATURE_TAGS.map((tag) => (
+          <TagChip
+            key={tag}
+            label={tag}
+            selected={form.tags.includes(tag)}
+            onPress={() => toggleTag(tag)}
+          />
+        ))}
+      </View>
+      <Text style={styles.sectionTitle}>Status</Text>
+      <SelectorButton
+        label="Possession"
+        value={form.possessionStatus}
+        placeholder="Select possession"
+        onPress={() => setActiveSelector('possessionStatus')}
+      />
+      <SelectorButton
+        label="Registry"
+        value={form.registryStatus}
+        placeholder="Select registry status"
+        onPress={() => setActiveSelector('registryStatus')}
+      />
+      <ExpandableSection title="More Status Options">
+        <SelectorButton
+          label="Map"
+          value={form.mapStatus}
+          placeholder="Select map status"
+          onPress={() => setActiveSelector('mapStatus')}
+        />
+        <SelectorButton
+          label="Dues"
+          value={form.duesStatus}
+          placeholder="Select dues status"
+          onPress={() => setActiveSelector('duesStatus')}
+        />
+        <SelectorButton
+          label="NOC"
+          value={form.nocStatus}
+          placeholder="Select NOC status"
+          onPress={() => setActiveSelector('nocStatus')}
+        />
+      </ExpandableSection>
+      {renderPropertySpecificFields()}
+    </>
+  );
+
+  const renderPhotos = () => (
+    <>
+      <Text style={styles.sectionTitle}>Photos</Text>
+      <View style={styles.imageUploadContainer}>
+        {form.images.map((image, index) => (
+          <View key={`${image}-${index}`} style={styles.imageItem}>
+            <Image source={{ uri: image }} style={styles.imagePreview} />
+            <Pressable
+              style={styles.removeImageBtn}
+              onPress={() => handleRemoveImage(index)}
+              accessibilityRole="button"
+              accessibilityLabel={`Remove photo ${index + 1}`}
+            >
+              <Ionicons name="close-circle" size={20} color="#fff" />
+            </Pressable>
+          </View>
+        ))}
+        <Pressable
+          style={styles.addImageBtn}
+          onPress={handleAddImage}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel="Add property photo"
+        >
+          <Ionicons name="add" size={32} color={colors.primary} />
+          <Text style={styles.addImageText}>Add Photo</Text>
+        </Pressable>
+      </View>
+      <InputField
+        label="Description"
+        placeholder="Add useful details for agents and buyers..."
+        value={form.description}
+        onChangeText={(description) => updateForm({ description })}
+        multiline
+        numberOfLines={4}
+        style={styles.textArea}
+      />
+      <ExpandableSection title="Advanced Notes">
+        <InputField
+          label="Google Location"
+          placeholder="Paste location link if available"
+          value={form.googleLocation || ''}
+          onChangeText={(googleLocation) => updateForm({ googleLocation })}
+        />
+        <InputField
+          label="Vacating Timeline"
+          placeholder="Immediate / 1 month / 3 months"
+          value={form.vacatingTimeline || ''}
+          onChangeText={(vacatingTimeline) => updateForm({ vacatingTimeline })}
+        />
+      </ExpandableSection>
+    </>
+  );
+
+  const pairSummary = isPairPlot
+    ? `Plots ${form.plotNumberOne || '?'} & ${form.plotNumberTwo || '?'}${
+        form.streetNumber ? ` - Street ${form.streetNumber}` : ''
+      }`
+    : '';
+
+  const renderPreview = () => (
+    <>
+      <View style={styles.previewCard}>
+        <View style={styles.previewHeader}>
+          <View>
+            <Text style={styles.previewTitle}>{form.propertyType || 'Property'}</Text>
+            <Text style={styles.previewSubtitle}>
+              {form.city || 'City'} - {form.society || 'Society'}
+            </Text>
+          </View>
+          <Pressable
+            style={styles.editButton}
+            onPress={() => setCurrentStep(0)}
+            accessibilityRole="button"
+            accessibilityLabel="Edit basics"
+          >
+            <Text style={styles.editText}>Edit</Text>
+          </Pressable>
+        </View>
+        <Text style={styles.previewPrice}>Rs {form.price || '-'}</Text>
+        <Text style={styles.previewLine}>
+          {form.size || '-'} {form.sizeUnit}
+        </Text>
+        {isPairPlot ? (
+          <>
+            <Text style={styles.previewLine}>{pairSummary}</Text>
+            <Text style={styles.previewLine}>
+              {form.sizeEach || '?'} {form.sizeEachUnit} each - {form.totalSize || '?'} {form.totalSizeUnit} total
+            </Text>
+          </>
+        ) : null}
+        <Text style={styles.previewLine}>
+          {form.phase || 'Phase'}{form.block ? ` - ${form.block}` : ''}
+        </Text>
+      </View>
+
+      <View style={styles.previewCard}>
+        <View style={styles.previewHeader}>
+          <Text style={styles.cardTitle}>Features</Text>
+          <Pressable
+            style={styles.editButton}
+            onPress={() => setCurrentStep(2)}
+            accessibilityRole="button"
+            accessibilityLabel="Edit features"
+          >
+            <Text style={styles.editText}>Edit</Text>
+          </Pressable>
+        </View>
+        <View style={styles.chipRow}>
+          {form.tags.length > 0 ? (
+            form.tags.map((tag) => <TagChip key={tag} label={tag} small />)
+          ) : (
+            <Text style={styles.emptyText}>No feature tags selected</Text>
+          )}
+        </View>
+        {form.possessionStatus ? <Text style={styles.previewLine}>Possession: {form.possessionStatus}</Text> : null}
+        {form.registryStatus ? <Text style={styles.previewLine}>Registry: {form.registryStatus}</Text> : null}
+      </View>
+
+      <View style={styles.previewCard}>
+        <View style={styles.previewHeader}>
+          <Text style={styles.cardTitle}>Photos & Description</Text>
+          <Pressable
+            style={styles.editButton}
+            onPress={() => setCurrentStep(3)}
+            accessibilityRole="button"
+            accessibilityLabel="Edit photos and description"
+          >
+            <Text style={styles.editText}>Edit</Text>
+          </Pressable>
+        </View>
+        {form.images.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {form.images.map((image, index) => (
+              <Image key={`${image}-${index}`} source={{ uri: image }} style={styles.previewImage} />
+            ))}
+          </ScrollView>
+        ) : (
+          <Text style={styles.emptyText}>No photos added</Text>
+        )}
+        {form.description ? <Text style={styles.descriptionPreview}>{form.description}</Text> : null}
+      </View>
+    </>
+  );
+
+  const renderStep = () => {
+    switch (currentStep) {
+      case 0:
+        return renderBasics();
+      case 1:
+        return renderPriceAndArea();
+      case 2:
+        return renderFeatures();
+      case 3:
+        return renderPhotos();
+      case 4:
+        return renderPreview();
+      default:
+        return null;
+    }
+  };
+
   return (
     <View style={styles.container}>
       <ScreenHeader
         title="Post Listing"
-        subtitle="Add new property listing"
+        subtitle="Guided property posting"
         left={
-          <Pressable onPress={() => navigation.goBack()}>
+          <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Go back">
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </Pressable>
         }
       />
-
-      <ScrollView
-        style={styles.form}
-        contentContainerStyle={styles.formContent}
-        keyboardShouldPersistTaps="handled"
+      <PostProgress steps={STEPS} currentStep={currentStep} />
+      <PostStepLayout
+        error={formError}
+        isFirst={currentStep === 0}
+        isLast={currentStep === STEPS.length - 1}
+        posting={isPosting}
+        onBack={handleBack}
+        onNext={handleNext}
       >
-        <Text style={styles.section}>Property Type</Text>
-        <View style={styles.chipRow}>
-          {PROPERTY_TYPES.map((type) => (
-            <TagChip
-              key={type}
-              label={type}
-              selected={form.propertyType === type}
-              onPress={() =>
-                setForm((prev) => ({
-                  ...prev,
-                  propertyType: type as PropertyType,
-                }))
-              }
-            />
-          ))}
-        </View>
-        <InputField
-          label="Size"
-          placeholder="e.g. 10"
-          value={form.size}
-          keyboardType="numeric"
-          onChangeText={(size) => setForm((prev) => ({ ...prev, size }))}
-        />
-        <Text style={styles.section}>Size Unit</Text>
-        <View style={styles.chipRow}>
-          {SIZE_UNITS.map((unit) => (
-            <TagChip
-              key={unit}
-              label={unit}
-              selected={form.sizeUnit === unit}
-              onPress={() =>
-                setForm((prev) => ({
-                  ...prev,
-                  sizeUnit: unit,
-                }))
-              }
-            />
-          ))}
-        </View>
-
-        <Text style={styles.section}>City</Text>
-        <View style={styles.chipRow}>
-          {CITIES.map((city) => (
-            <TagChip
-              key={city}
-              label={city}
-              selected={form.city === city}
-              onPress={() =>
-                setForm((prev) => ({
-                  ...prev,
-                  city: city as City,
-                  society: '',
-                  phase: '',
-                  block: '',
-                }))
-              }
-            />
-          ))}
-        </View>
-        {form.city && (
-          <>
-            <Text style={styles.section}>Society</Text>
-            <View style={styles.chipRow}>
-              {getSocieties(form.city as City).map((society) => (
-                <TagChip
-                  key={society}
-                  label={society}
-                  selected={form.society === society}
-                  onPress={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      society,
-                      phase: '',
-                      block: '',
-                    }))
-                  }
-                />
-              ))}
-            </View>
-          </>
-        )}
-        {form.society && (
-          <>
-            <Text style={styles.section}>Phase / Sector</Text>
-            <View style={styles.chipRow}>
-              {getPhasesForSociety(form.city as City, form.society).map((phase) => (
-                <TagChip
-                  key={phase}
-                  label={phase}
-                  selected={form.phase === phase}
-                  onPress={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      phase,
-                      block: '',
-                    }))
-                  }
-                />
-              ))}
-            </View>
-          </>
-        )}
-        {form.phase && (
-          <>
-            <Text style={styles.section}>Block</Text>
-            <View style={styles.chipRow}>
-              {getBlocksForPhase(form.city as City, form.society, form.phase).map((block) => (
-                <TagChip
-                  key={block}
-                  label={block}
-                  selected={form.block === block}
-                  onPress={() => setForm((prev) => ({ ...prev, block }))}
-                />
-              ))}
-            </View>
-          </>
-        )}
-        <InputField
-          label="Price (Rs)"
-          placeholder="e.g. 18500000"
-          keyboardType="numeric"
-          value={form.price}
-          onChangeText={(price) => setForm((prev) => ({ ...prev, price }))}
-        />
-
-        <Text style={styles.section}>Photos</Text>
-        <View style={styles.imageUploadContainer}>
-          {form.images.map((image, index) => (
-            <View key={index} style={styles.imageItem}>
-              <Image source={{ uri: image }} style={styles.imagePreview} />
-              <Pressable
-                style={styles.removeImageBtn}
-                onPress={() => handleRemoveImage(index)}
-              >
-                <Ionicons name="close-circle" size={20} color="#fff" />
-              </Pressable>
-            </View>
-          ))}
-          <Pressable
-            style={styles.addImageBtn}
-            onPress={handleAddImage}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="add" size={32} color={colors.primary} />
-            <Text style={styles.addImageText}>Add Photo</Text>
-          </Pressable>
-        </View>
-
-        <Text style={styles.section}>Possession Status</Text>
-        <View style={styles.chipRow}>
-          {POSSESSION_STATUS.map((status) => (
-            <TagChip
-              key={status}
-              label={status}
-              selected={form.possessionStatus === status}
-              onPress={() =>
-                setForm((prev) => ({
-                  ...prev,
-                  possessionStatus: status as any,
-                }))
-              }
-            />
-          ))}
-        </View>
-
-        <Text style={styles.section}>Registry Status</Text>
-        <View style={styles.chipRow}>
-          {REGISTRY_STATUS.map((status) => (
-            <TagChip
-              key={status}
-              label={status}
-              selected={form.registryStatus === status}
-              onPress={() =>
-                setForm((prev) => ({
-                  ...prev,
-                  registryStatus: status as any,
-                }))
-              }
-            />
-          ))}
-        </View>
-
-        <Text style={styles.section}>Map Status</Text>
-        <View style={styles.chipRow}>
-          {MAP_STATUS.map((status) => (
-            <TagChip
-              key={status}
-              label={status}
-              selected={form.mapStatus === status}
-              onPress={() =>
-                setForm((prev) => ({
-                  ...prev,
-                  mapStatus: status as any,
-                }))
-              }
-            />
-          ))}
-        </View>
-
-        <Text style={styles.section}>Dues Status</Text>
-        <View style={styles.chipRow}>
-          {DUES_STATUS.map((status) => (
-            <TagChip
-              key={status}
-              label={status}
-              selected={form.duesStatus === status}
-              onPress={() =>
-                setForm((prev) => ({
-                  ...prev,
-                  duesStatus: status as any,
-                }))
-              }
-            />
-          ))}
-        </View>
-
-        <Text style={styles.section}>NOC Status</Text>
-        <View style={styles.chipRow}>
-          {NOC_STATUS.map((status) => (
-            <TagChip
-              key={status}
-              label={status}
-              selected={form.nocStatus === status}
-              onPress={() =>
-                setForm((prev) => ({
-                  ...prev,
-                  nocStatus: status as any,
-                }))
-              }
-            />
-          ))}
-        </View>
-
-        <Text style={styles.section}>Special Tags</Text>
-        <View style={styles.chipRow}>
-          {SPECIAL_TAGS.map((tag) => (
-            <TagChip
-              key={tag}
-              label={tag}
-              selected={form.tags.includes(tag as SpecialTag)}
-              onPress={() => toggleTag(tag as SpecialTag)}
-            />
-          ))}
-        </View>
-
-        <InputField
-          label="Description (optional)"
-          placeholder="Additional details..."
-          value={form.description}
-          onChangeText={(description) =>
-            setForm((prev) => ({ ...prev, description }))
-          }
-          multiline
-          numberOfLines={3}
-          style={styles.textArea}
-        />
-
-        {form.propertyType === 'Residential Plot' && (
-          <>
-            <Text style={styles.section}>Plot Details</Text>
-            <InputField
-              label="Level"
-              placeholder="e.g. Level / Raised / Lowered"
-              value={form.level || ''}
-              onChangeText={(level) => setForm((prev) => ({ ...prev, level }))}
-            />
-            <InputField
-              label="Facing"
-              placeholder="North / South / East / West"
-              value={form.facing || ''}
-              onChangeText={(facing) => setForm((prev) => ({ ...prev, facing }))}
-            />
-            <InputField
-              label="Street Width (feet)"
-              placeholder="e.g. 40"
-              keyboardType="numeric"
-              value={form.streetWidth || ''}
-              onChangeText={(streetWidth) => setForm((prev) => ({ ...prev, streetWidth }))}
-            />
-          </>
-        )}
-
-        {form.propertyType === 'Commercial Plot' && (
-          <>
-            <Text style={styles.section}>Commercial Details</Text>
-            <InputField
-              label="Approval"
-              placeholder="LDA / RDA / CDA / DHA / Bahria / Unapproved"
-              value={form.approval || ''}
-              onChangeText={(approval) => setForm((prev) => ({ ...prev, approval }))}
-            />
-          </>
-        )}
-
-        {form.propertyType === 'House' && (
-          <>
-            <Text style={styles.section}>House Details</Text>
-            <InputField
-              label="Construction"
-              placeholder="Brand New / Used"
-              value={form.construction || ''}
-              onChangeText={(construction) => setForm((prev) => ({ ...prev, construction }))}
-            />
-            <InputField
-              label="Quality"
-              placeholder="Grey / Partially / Fully finished"
-              value={form.quality || ''}
-              onChangeText={(quality) => setForm((prev) => ({ ...prev, quality }))}
-            />
-            <InputField
-              label="Furnished"
-              placeholder="Furnished / Unfurnished / Semi"
-              value={form.furnished || ''}
-              onChangeText={(furnished) => setForm((prev) => ({ ...prev, furnished }))}
-            />
-          </>
-        )}
-
-        {form.propertyType === 'Apartment / Flat' && (
-          <>
-            <Text style={styles.section}>Apartment Details</Text>
-            <InputField
-              label="Floor Number"
-              placeholder="e.g. 3"
-              keyboardType="numeric"
-              value={form.floorNumber ? String(form.floorNumber) : ''}
-              onChangeText={(floorNumber) => setForm((prev) => ({ ...prev, floorNumber: parseInt(floorNumber) || undefined }))}
-            />
-            <InputField
-              label="Total Floors"
-              placeholder="e.g. 10"
-              keyboardType="numeric"
-              value={form.totalFloors ? String(form.totalFloors) : ''}
-              onChangeText={(totalFloors) => setForm((prev) => ({ ...prev, totalFloors: parseInt(totalFloors) || undefined }))}
-            />
-            <InputField
-              label="Parking Spots"
-              placeholder="e.g. 1"
-              keyboardType="numeric"
-              value={form.parking ? String(form.parking) : ''}
-              onChangeText={(parking) => setForm((prev) => ({ ...prev, parking: parseInt(parking) || undefined }))}
-            />
-          </>
-        )}
-
-        {form.propertyType === 'Farm House' && (
-          <>
-            <Text style={styles.section}>Farm House Details</Text>
-            <InputField
-              label="Dimensions (length x width feet)"
-              placeholder="MANDATORY"
-              value={form.dimensions || ''}
-              onChangeText={(dimensions) => setForm((prev) => ({ ...prev, dimensions }))}
-            />
-          </>
-        )}
-
-        {form.propertyType === 'File' && (
-          <>
-            <Text style={styles.section}>File Details</Text>
-            <InputField
-              label="Balance Amount (₨)"
-              placeholder="MANDATORY"
-              keyboardType="numeric"
-              value={form.balanceAmount || ''}
-              onChangeText={(balanceAmount) => setForm((prev) => ({ ...prev, balanceAmount }))}
-            />
-          </>
-        )}
-
-        {form.propertyType === 'Industrial Plot' && (
-          <>
-            <Text style={styles.section}>Industrial Details</Text>
-            <InputField
-              label="Industrial Estate Name"
-              placeholder="MANDATORY"
-              value={form.industrialEstate || ''}
-              onChangeText={(industrialEstate) => setForm((prev) => ({ ...prev, industrialEstate }))}
-            />
-          </>
-        )}
-
-        {form.propertyType === 'Penthouse' && (
-          <>
-            <Text style={styles.section}>Penthouse Details</Text>
-            <InputField
-              label="Floor Number"
-              placeholder="e.g. 10"
-              keyboardType="numeric"
-              value={form.floorNumber ? String(form.floorNumber) : ''}
-              onChangeText={(floorNumber) => setForm((prev) => ({ ...prev, floorNumber: parseInt(floorNumber) || undefined }))}
-            />
-            <InputField
-              label="Total Floors"
-              placeholder="e.g. 12"
-              keyboardType="numeric"
-              value={form.totalFloors ? String(form.totalFloors) : ''}
-              onChangeText={(totalFloors) => setForm((prev) => ({ ...prev, totalFloors: parseInt(totalFloors) || undefined }))}
-            />
-            <InputField
-              label="Rooftop Area (sqft)"
-              placeholder="e.g. 500"
-              keyboardType="numeric"
-              value={form.rooftopArea || ''}
-              onChangeText={(rooftopArea) => setForm((prev) => ({ ...prev, rooftopArea }))}
-            />
-          </>
-        )}
-
-        <View style={styles.review}>
-          <Text style={styles.reviewTitle}>Review</Text>
-          <Text style={styles.reviewLine}>
-            {form.propertyType} · {form.size} {form.sizeUnit}
-          </Text>
-          <Text style={styles.reviewLine}>
-            {form.city} · {form.society}
-          </Text>
-          <Text style={styles.reviewLine}>
-            {form.phase} {form.block ? `· ${form.block}` : ''}
-          </Text>
-          <Text style={styles.reviewPrice}>Rs {form.price}</Text>
-          {form.possessionStatus && (
-            <Text style={styles.reviewLine}>
-              Possession: {form.possessionStatus}
-            </Text>
-          )}
-          {form.images.length > 0 && (
-            <Text style={styles.reviewLine}>
-              {form.images.length} photo{form.images.length !== 1 ? 's' : ''}
-            </Text>
-          )}
-          {form.tags.length > 0 && (
-            <View style={styles.chipRow}>
-              {form.tags.map((t) => (
-                <TagChip key={t} label={t} small />
-              ))}
-            </View>
-          )}
-        </View>
-      </ScrollView>
-
-      <View style={styles.footer}>
-        {formError ? <Text style={styles.formError}>{formError}</Text> : null}
-        <Button
-          title={isPosting ? 'Posting...' : 'Post Listing'}
-          onPress={handlePost}
-          loading={isPosting}
-          disabled={!form.propertyType || !form.size || !form.city || !form.society || !form.phase || !form.price}
-          style={styles.postBtn}
-        />
-      </View>
+        {renderStep()}
+      </PostStepLayout>
+      <BottomSheetSelector
+        visible={Boolean(activeSelector)}
+        title={selectorTitle}
+        options={selectorOptions}
+        selected={selectorValue}
+        searchable={selectorSearchable}
+        onSelect={selectOption}
+        onClose={() => setActiveSelector(null)}
+      />
     </View>
   );
 }
@@ -724,95 +963,60 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  progress: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: colors.surface,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  progressItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  dot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.inputBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  dotActive: {
-    backgroundColor: colors.primaryLight,
-  },
-  dotDone: {
-    backgroundColor: colors.accent,
-  },
-  dotText: {
-    fontSize: 12,
+  sectionTitle: {
+    color: colors.primary,
+    fontSize: 15,
     fontWeight: '700',
-    color: colors.textMuted,
+    marginBottom: 12,
   },
-  dotTextActive: {
-    color: '#fff',
+  quickTypeRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 14,
   },
-  stepLabel: {
-    fontSize: 10,
-    color: colors.textMuted,
-    textAlign: 'center',
+  locationCard: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    padding: 14,
+    marginBottom: 14,
   },
-  stepLabelActive: {
-    color: colors.primary,
-    fontWeight: '600',
+  cardTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 12,
   },
-  form: {
-    flex: 1,
+  helperText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 12,
   },
-  formContent: {
-    padding: 16,
-    paddingBottom: 24,
-  },
-  section: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
-    marginBottom: 10,
+  twoColumn: {
+    flexDirection: 'row',
+    gap: 10,
   },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: 12,
   },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
   imageUploadContainer: {
-    marginBottom: 12,
+    marginBottom: 16,
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
   },
-  imageScroll: {
-    flexDirection: 'row',
-    flexGrow: 0,
-    marginRight: 8,
-  },
-  imageScrollContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   imageItem: {
     marginRight: 8,
+    marginBottom: 8,
     position: 'relative',
   },
   imagePreview: {
-    width: 80,
-    height: 80,
+    width: 84,
+    height: 84,
     borderRadius: 8,
     backgroundColor: colors.inputBg,
     borderWidth: StyleSheet.hairlineWidth,
@@ -827,8 +1031,8 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   addImageBtn: {
-    width: 80,
-    height: 80,
+    width: 84,
+    height: 84,
     borderRadius: 8,
     backgroundColor: colors.inputBg,
     alignItems: 'center',
@@ -836,55 +1040,84 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.border,
     borderStyle: 'dashed',
-    zIndex: 10,
+    marginBottom: 8,
   },
   addImageText: {
     fontSize: 11,
     color: colors.primary,
     marginTop: 4,
-    fontWeight: '500',
+    fontWeight: '600',
   },
-  review: {
-    backgroundColor: colors.surface,
-    borderRadius: 10,
-    padding: 16,
-    marginTop: 8,
+  textArea: {
+    minHeight: 96,
+    textAlignVertical: 'top',
+  },
+  previewCard: {
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.border,
+    backgroundColor: colors.surface,
+    padding: 14,
+    marginBottom: 12,
   },
-  reviewTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+  previewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 10,
+  },
+  previewTitle: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  previewSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    marginTop: 2,
+  },
+  previewPrice: {
     color: colors.primary,
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  previewLine: {
+    color: colors.text,
+    fontSize: 14,
+    marginBottom: 4,
+    lineHeight: 19,
+  },
+  editButton: {
+    height: 34,
+    paddingHorizontal: 12,
+    borderRadius: 17,
+    backgroundColor: colors.inputBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editText: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  emptyText: {
+    color: colors.textMuted,
+    fontSize: 13,
     marginBottom: 8,
   },
-  reviewLine: {
-    fontSize: 15,
-    color: colors.text,
-    marginBottom: 4,
+  previewImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 8,
+    marginRight: 8,
+    backgroundColor: colors.inputBg,
   },
-  reviewPrice: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.primary,
-    marginVertical: 8,
-  },
-  footer: {
-    padding: 16,
-    paddingBottom: 24,
-    backgroundColor: colors.surface,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-  },
-  formError: {
-    color: colors.error,
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  postBtn: {
-    flex: 1,
+  descriptionPreview: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 10,
   },
   guestContainer: {
     flex: 1,

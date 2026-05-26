@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -15,52 +15,38 @@ import { Button } from '@/components/Button';
 import { InputField } from '@/components/InputField';
 import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/theme/colors';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export function LoginScreen() {
-  const { login } = useAuth();
+  const { login, resetPassword, getRememberedLogin } = useAuth();
   const navigation = useNavigation();
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
-  // Load saved credentials on mount
   useEffect(() => {
-    loadSavedCredentials();
-  }, []);
+    let mounted = true;
 
-  const loadSavedCredentials = async () => {
-    try {
-      const savedMobile = await AsyncStorage.getItem('savedMobile');
-      const savedPassword = await AsyncStorage.getItem('savedPassword');
-      if (savedMobile && savedPassword) {
-        setMobile(savedMobile);
-        setPassword(savedPassword);
-        setRememberMe(true);
-      }
-    } catch (e) {
-      console.error('Failed to load credentials', e);
+    async function loadRememberedLogin() {
+      const remembered = await getRememberedLogin();
+      if (!mounted || !remembered) return;
+      setMobile(remembered.mobile);
+      setPassword(remembered.passcode);
+      setRememberMe(true);
     }
-  };
 
-  const saveCredentials = async (mobile: string, password: string) => {
-    try {
-      if (rememberMe) {
-        await AsyncStorage.setItem('savedMobile', mobile);
-        await AsyncStorage.setItem('savedPassword', password);
-      } else {
-        await AsyncStorage.removeItem('savedMobile');
-        await AsyncStorage.removeItem('savedPassword');
-      }
-    } catch (e) {
-      console.error('Failed to save credentials', e);
-    }
-  };
+    void loadRememberedLogin();
+
+    return () => {
+      mounted = false;
+    };
+  }, [getRememberedLogin]);
 
   const handleLogin = async () => {
     setError('');
+    setNotice('');
     if (!mobile.trim()) {
       setError('Enter your mobile number');
       return;
@@ -70,29 +56,47 @@ export function LoginScreen() {
       return;
     }
     setLoading(true);
-    const ok = await login(mobile, password);
+    const ok = await login(mobile, password, rememberMe);
     setLoading(false);
-    if (ok) {
-      await saveCredentials(mobile, password);
-    } else {
+    if (!ok) {
       setError('Invalid mobile or password. Use 10+ digits and 4+ char password.');
     }
   };
 
   const handleAdminDemoLogin = async () => {
     setError('');
+    setNotice('');
     setLoading(true);
     const adminMobile = '03000000000';
     const adminPassword = '';
-    const ok = await login(adminMobile, adminPassword);
+    const ok = await login(adminMobile, adminPassword, rememberMe);
     setLoading(false);
     if (ok) {
       setMobile(adminMobile);
       setPassword(adminPassword);
-      await saveCredentials(adminMobile, adminPassword);
     } else {
       setError('Could not open admin demo account.');
     }
+  };
+
+  const handleForgotPassword = async () => {
+    setError('');
+    setNotice('');
+    if (!mobile.trim()) {
+      setError('Enter your mobile number first, then tap Forgot Password.');
+      return;
+    }
+
+    setLoading(true);
+    const ok = await resetPassword(mobile);
+    setLoading(false);
+    if (!ok) {
+      setError('Password reset is not available for this mobile number.');
+      return;
+    }
+
+    setPassword('1234');
+    setNotice('Password reset for demo. Use 1234 to login.');
   };
 
   return (
@@ -129,18 +133,27 @@ export function LoginScreen() {
         />
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
+        {notice ? <Text style={styles.notice}>{notice}</Text> : null}
 
         <View style={styles.rememberRow}>
           <Pressable
             style={styles.checkboxRow}
             onPress={() => setRememberMe(!rememberMe)}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: rememberMe }}
+            accessibilityLabel="Remember me"
           >
             <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
               {rememberMe && <Ionicons name="checkmark" size={14} color="#fff" />}
             </View>
             <Text style={styles.checkboxLabel}>Remember me</Text>
           </Pressable>
-          <Pressable onPress={() => {}} style={styles.forgotLink}>
+          <Pressable
+            onPress={handleForgotPassword}
+            style={styles.forgotLink}
+            accessibilityRole="button"
+            accessibilityLabel="Forgot password"
+          >
             <Text style={styles.forgotText}>Forgot Password?</Text>
           </Pressable>
         </View>
@@ -203,6 +216,12 @@ const styles = StyleSheet.create({
   },
   error: {
     color: colors.error,
+    fontSize: 14,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  notice: {
+    color: colors.primary,
     fontSize: 14,
     marginBottom: 12,
     textAlign: 'center',

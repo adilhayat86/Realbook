@@ -83,6 +83,8 @@ export function FeedScreen() {
             <Pressable
               style={styles.modeButton}
               onPress={() => handleModeChange(mode === 'list' ? 'swipe' : 'list')}
+              accessibilityRole="button"
+              accessibilityLabel={mode === 'list' ? 'Switch to swipe feed' : 'Switch to list feed'}
             >
               <Ionicons
                 name={mode === 'list' ? 'list-outline' : 'swap-horizontal-outline'}
@@ -90,11 +92,19 @@ export function FeedScreen() {
                 color="#fff"
               />
             </Pressable>
-            <Pressable onPress={() => navigation.navigate('Requirements' as never)}>
+            <Pressable
+              onPress={() => navigation.navigate('Requirements' as never)}
+              accessibilityRole="button"
+              accessibilityLabel="Post requirement"
+            >
               <Ionicons name="add-circle-outline" size={24} color="#fff" />
             </Pressable>
             {role === 'admin' ? (
-              <Pressable onPress={() => navigation.navigate('Admin' as never)}>
+              <Pressable
+                onPress={() => navigation.navigate('Admin' as never)}
+                accessibilityRole="button"
+                accessibilityLabel="Open admin panel"
+              >
                 <Ionicons name="shield-checkmark-outline" size={24} color="#fff" />
               </Pressable>
             ) : null}

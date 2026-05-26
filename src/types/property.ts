@@ -1,5 +1,6 @@
 export type PropertyType =
   | 'Residential Plot'
+  | 'Pair Plot'
   | 'Commercial Plot'
   | 'House'
   | 'Apartment / Flat'
@@ -81,6 +82,13 @@ export interface Listing {
   level?: string;
   facing?: string;
   streetWidth?: string;
+  plotNumberOne?: string;
+  plotNumberTwo?: string;
+  streetNumber?: string;
+  sizeEach?: string;
+  sizeEachUnit?: string;
+  totalSize?: string;
+  totalSizeUnit?: string;
   corner?: boolean;
   parkFacing?: boolean;
   mainBoulevard?: boolean;
@@ -149,6 +157,13 @@ export interface PostFormData {
   level?: string;
   facing?: string;
   streetWidth?: string;
+  plotNumberOne?: string;
+  plotNumberTwo?: string;
+  streetNumber?: string;
+  sizeEach?: string;
+  sizeEachUnit?: string;
+  totalSize?: string;
+  totalSizeUnit?: string;
   corner?: boolean;
   parkFacing?: boolean;
   mainBoulevard?: boolean;

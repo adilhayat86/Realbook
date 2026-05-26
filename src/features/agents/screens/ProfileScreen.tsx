@@ -111,12 +111,6 @@ export function ProfileScreen({ navigation, route }: Props) {
                 <Text style={styles.statLabel}>Comments</Text>
               </View>
             </View>
-            {isOwnProfile && (
-              <Pressable style={styles.logoutBtn} onPress={handleLogout}>
-                <Ionicons name="log-out-outline" size={16} color={colors.error} />
-                <Text style={styles.logoutText}>Logout</Text>
-              </Pressable>
-            )}
           </View>
         </View>
 
@@ -137,6 +131,21 @@ export function ProfileScreen({ navigation, route }: Props) {
             )}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            ListFooterComponent={
+              isOwnProfile ? (
+                <View style={styles.accountFooter}>
+                  <Pressable
+                    style={styles.logoutBtn}
+                    onPress={handleLogout}
+                    accessibilityRole="button"
+                    accessibilityLabel="Logout"
+                  >
+                    <Ionicons name="log-out-outline" size={18} color={colors.error} />
+                    <Text style={styles.logoutText}>Logout</Text>
+                  </Pressable>
+                </View>
+              ) : null
+            }
             ListEmptyComponent={
               <Text style={styles.empty}>
                 No listings yet. Post from the Post tab or Menu → Add Inventory.
@@ -250,14 +259,18 @@ const styles = StyleSheet.create({
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 6,
-    padding: 4,
+    justifyContent: 'center',
+    gap: 8,
+    minHeight: 44,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.error,
+    backgroundColor: colors.surface,
   },
   logoutText: {
-    fontSize: 12,
+    fontSize: 14,
     color: colors.error,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   listingsSection: {
     flex: 3,
@@ -279,6 +292,11 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 24,
+  },
+  accountFooter: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 28,
   },
   empty: {
     textAlign: 'center',

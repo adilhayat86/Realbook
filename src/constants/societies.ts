@@ -381,6 +381,7 @@ export const CITIES = ["Rawalpindi", "Islamabad"];
 // Property types
 export const PROPERTY_TYPES = [
   "Residential Plot",
+  "Pair Plot",
   "Commercial Plot",
   "House",
   "Apartment / Flat",

@@ -26,8 +26,18 @@ export function ListingCard({ listing, popularityRank, hideAgent }: ListingCardP
   const [saved, setSaved] = useState(false);
   const navigation = useNavigation<Nav>();
 
-  const expertiseAreas = listing.agentExpertise.slice(0, 2).join(' · ');
+  const expertiseAreas = listing.agentExpertise.slice(0, 2).join(' - ');
   const matchReasons = listing.matchReasons ?? [];
+  const isPairPlot = listing.propertyType === 'Pair Plot';
+  const pairPlotLine =
+    isPairPlot && listing.plotNumberOne && listing.plotNumberTwo
+      ? `Pair Plot - Plots ${listing.plotNumberOne} & ${listing.plotNumberTwo} - ${
+          listing.sizeEach ? `${listing.sizeEach} ${listing.sizeEachUnit || listing.sizeUnit} each` : 'Two adjacent/in-row plots'
+        }`
+      : 'Pair Plot - Two adjacent/in-row plots';
+  const propertyLine = isPairPlot
+    ? pairPlotLine
+    : `${listing.propertyType}${listing.size ? ` - ${listing.size} ${listing.sizeUnit}` : ''} - ${listing.city} - ${listing.society}`;
 
   const handleAgentPress = () => {
     navigation.navigate('ProfileMain', { agentId: listing.agentId });
@@ -49,8 +59,8 @@ export function ListingCard({ listing, popularityRank, hideAgent }: ListingCardP
             <Text style={styles.rankText}>#{popularityRank}</Text>
           </View>
           <Text style={styles.popularityLabel}>
-            {popularityRank === 1 ? 'Most popular' : 'By comments'} ·{' '}
-            {listing.commentCount} comment{listing.commentCount !== 1 ? 's' : ''}
+            {popularityRank === 1 ? 'Most popular' : 'By comments'} - {listing.commentCount} comment
+            {listing.commentCount !== 1 ? 's' : ''}
           </Text>
         </View>
       )}
@@ -136,13 +146,14 @@ export function ListingCard({ listing, popularityRank, hideAgent }: ListingCardP
             </View>
           )}
           <Text style={styles.propertyLine} numberOfLines={2}>
-            <Text style={styles.propertyType}>{listing.propertyType}</Text>
-            {listing.size ? ` · ${listing.size} ${listing.sizeUnit}` : ''}
-            {' · '}
-            {listing.city} · {listing.society}
+            <Text style={styles.propertyType}>{isPairPlot ? 'Pair Plot' : listing.propertyType}</Text>
+            {propertyLine.replace(isPairPlot ? 'Pair Plot' : listing.propertyType, '')}
           </Text>
+          {isPairPlot && listing.streetNumber && (
+            <Text style={styles.locationLine}>Street {listing.streetNumber}</Text>
+          )}
           <Text style={styles.locationLine}>
-            {listing.phase} {listing.block ? `· ${listing.block}` : ''}
+            {listing.phase}{listing.block ? ` - ${listing.block}` : ''}
           </Text>
           <Text style={styles.price}>{formatPrice(listing.price)}</Text>
           {listing.possessionStatus && (

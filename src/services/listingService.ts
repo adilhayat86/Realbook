@@ -67,6 +67,11 @@ export const listingService = {
     return getStoredValue<Listing[]>(LISTINGS_KEY, MOCK_LISTINGS);
   },
 
+  async getRecordRoomListings(): Promise<Listing[]> {
+    const listings = await getStoredValue<Listing[]>(LISTINGS_KEY, MOCK_LISTINGS);
+    return listings.filter((listing) => listing.status === 'record_room');
+  },
+
   async createListing(data: PostFormData, profile: UserProfile): Promise<Listing> {
     const newListing = toListing(data, profile);
     await updateStoredValue<Listing[]>(LISTINGS_KEY, MOCK_LISTINGS, (current) => [

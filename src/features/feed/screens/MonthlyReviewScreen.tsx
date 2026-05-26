@@ -176,7 +176,7 @@ export function MonthlyReviewScreen() {
             />
           </View>
           <Text style={styles.progressText}>
-            {reviewedCount} reviewed · {agentListings.length - reviewedCount} remaining
+            {reviewedCount} reviewed - {agentListings.length - reviewedCount} remaining
           </Text>
         </View>
 
@@ -188,27 +188,23 @@ export function MonthlyReviewScreen() {
             <View style={styles.cardInfo}>
               <Text style={styles.cardTitle}>{currentListing.propertyType}</Text>
               <Text style={styles.cardSubtitle}>
-                {currentListing.city} · {currentListing.society}
+                {currentListing.city} - {currentListing.society}
               </Text>
             </View>
           </View>
 
           <View style={styles.cardDetails}>
             <Text style={styles.detail}>
-              <Text style={styles.detailLabel}>Price:</Text> {' '}
-              {currentListing.price.toLocaleString()}
+              <Text style={styles.detailLabel}>Price:</Text> {currentListing.price.toLocaleString()}
             </Text>
             <Text style={styles.detail}>
-              <Text style={styles.detailLabel}>Size:</Text> {' '}
-              {currentListing.size} {currentListing.sizeUnit}
+              <Text style={styles.detailLabel}>Size:</Text> {currentListing.size} {currentListing.sizeUnit}
             </Text>
             <Text style={styles.detail}>
-              <Text style={styles.detailLabel}>Phase:</Text> {' '}
-              {currentListing.phase}
+              <Text style={styles.detailLabel}>Phase:</Text> {currentListing.phase}
             </Text>
             <Text style={styles.detail}>
-              <Text style={styles.detailLabel}>Block:</Text> {' '}
-              {currentListing.block}
+              <Text style={styles.detailLabel}>Block:</Text> {currentListing.block}
             </Text>
           </View>
 

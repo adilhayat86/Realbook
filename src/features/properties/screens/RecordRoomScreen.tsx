@@ -16,7 +16,7 @@ import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/theme/colors';
 
 export function RecordRoomScreen() {
-  const { listings, profile } = useApp();
+  const { recordRoomListings, profile } = useApp();
   const { role } = useAuth();
   const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = useState('');
@@ -88,31 +88,29 @@ export function RecordRoomScreen() {
     );
   }
 
-  // Filter listings that would be in Record Room (sold, archived, deleted)
-  // For now, we'll show all listings as a demo
-  const recordRoomListings = listings.filter(l => 
+  const visibleRecordRoomListings = recordRoomListings.filter(l =>
     l.agentId === profile.id || role === 'admin'
   );
 
-  const filteredListings = recordRoomListings.filter(l =>
+  const filteredListings = visibleRecordRoomListings.filter(l =>
     l.society.toLowerCase().includes(searchQuery.toLowerCase()) ||
     l.phase.toLowerCase().includes(searchQuery.toLowerCase()) ||
     l.propertyType.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const renderListing = ({ item }: { item: typeof listings[0] }) => (
+  const renderListing = ({ item }: { item: typeof recordRoomListings[0] }) => (
     <View style={styles.listingCard}>
       <View style={styles.listingHeader}>
         <View style={styles.statusBadge}>
-          <Text style={styles.statusText}>SOLD</Text>
+          <Text style={styles.statusText}>{item.status === 'sold' ? 'SOLD' : 'RECORD'}</Text>
         </View>
         <Text style={styles.listingDate}>
-          Sold: {new Date().toLocaleDateString()}
+          Archived: {item.archivedAt ? new Date(item.archivedAt).toLocaleDateString() : 'Saved'}
         </Text>
       </View>
       <Text style={styles.listingTitle}>{item.propertyType}</Text>
       <Text style={styles.listingLocation}>
-        {item.city} · {item.society} · {item.phase}
+        {item.city} - {item.society} - {item.phase}
       </Text>
       <View style={styles.listingDetails}>
         <Text style={styles.detail}>

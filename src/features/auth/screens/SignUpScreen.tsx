@@ -2,10 +2,8 @@ import React, { useState } from 'react';
 import {
   StyleSheet,
   Text,
-  TextInput,
   View,
   Pressable,
-  Alert,
   ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -19,7 +17,7 @@ type SignupStep = 'documents' | 'details' | 'password' | 'pending';
 
 export function SignUpScreen() {
   const navigation = useNavigation();
-  const { login } = useAuth();
+  const { register } = useAuth();
   const [step, setStep] = useState<SignupStep>('documents');
   
   // Step 1: Documents
@@ -39,6 +37,8 @@ export function SignUpScreen() {
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const expertiseOptions = [
     'Residential Plots',
@@ -60,42 +60,58 @@ export function SignUpScreen() {
     );
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    setFormError('');
+
     if (step === 'documents') {
       if (!visitingCardFront || !visitingCardBack || !cnicFront || !cnicBack) {
-        Alert.alert('Error', 'Please upload all required documents');
+        setFormError('Please upload all required documents.');
         return;
       }
       setStep('details');
     } else if (step === 'details') {
       if (!name.trim() || !agency.trim() || !city.trim() || !officeAddress.trim()) {
-        Alert.alert('Error', 'Please fill all required fields');
+        setFormError('Please fill name, agency, city, and office address.');
         return;
       }
       if (expertiseAreas.length === 0) {
-        Alert.alert('Error', 'Please select at least one expertise area');
+        setFormError('Please select at least one expertise area.');
         return;
       }
       setStep('password');
     } else if (step === 'password') {
       if (!mobile.trim()) {
-        Alert.alert('Error', 'Please enter your mobile number');
+        setFormError('Please enter your mobile number.');
         return;
       }
       if (mobile.replace(/\D/g, '').length < 10) {
-        Alert.alert('Error', 'Please enter a valid mobile number');
+        setFormError('Please enter a valid mobile number.');
         return;
       }
       if (!password) {
-        Alert.alert('Error', 'Please enter a password');
+        setFormError('Please enter a password.');
         return;
       }
       if (password.length < 4) {
-        Alert.alert('Error', 'Password must be at least 4 characters');
+        setFormError('Password must be at least 4 characters.');
         return;
       }
       if (password !== confirmPassword) {
-        Alert.alert('Error', 'Passwords do not match');
+        setFormError('Passwords do not match.');
+        return;
+      }
+      setSubmitting(true);
+      const ok = await register({
+        name,
+        mobile,
+        passcode: password,
+        agency,
+        city,
+        expertiseAreas,
+      });
+      setSubmitting(false);
+      if (!ok) {
+        setFormError('Could not create account. Please check your details.');
         return;
       }
       setStep('pending');
@@ -103,18 +119,21 @@ export function SignUpScreen() {
   };
 
   const handleBack = () => {
+    setFormError('');
     if (step === 'details') setStep('documents');
     else if (step === 'password') setStep('details');
     else if (step === 'pending') setStep('password');
   };
 
   const handleUpload = (type: 'visitingCardFront' | 'visitingCardBack' | 'cnicFront' | 'cnicBack') => {
-    // Mock upload - in real app would use ImagePicker
-    Alert.alert('Upload', `Upload ${type} (mock)`);
     if (type === 'visitingCardFront') setVisitingCardFront('uploaded');
     else if (type === 'visitingCardBack') setVisitingCardBack('uploaded');
     else if (type === 'cnicFront') setCnicFront('uploaded');
     else if (type === 'cnicBack') setCnicBack('uploaded');
+  };
+
+  const goToLogin = () => {
+    navigation.goBack();
   };
 
   return (
@@ -297,10 +316,13 @@ export function SignUpScreen() {
               Admin will approve within 24 hours.
             </Text>
             <Text style={styles.pendingNote}>
-              You will receive a notification once approved.
+              Your demo account is saved as pending. You can return to login and sign in with this mobile and password.
             </Text>
+            <Button title="Back to Login" onPress={goToLogin} style={styles.pendingButton} />
           </View>
         )}
+
+        {formError ? <Text style={styles.errorText}>{formError}</Text> : null}
       </ScrollView>
 
       {step !== 'pending' && (
@@ -316,6 +338,7 @@ export function SignUpScreen() {
           <Button
             title={step === 'password' ? 'Submit' : 'Next'}
             onPress={handleNext}
+            loading={submitting}
             style={styles.nextBtn}
           />
         </View>
@@ -441,6 +464,19 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
     marginTop: 24,
+  },
+  pendingButton: {
+    alignSelf: 'stretch',
+    marginTop: 24,
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 20,
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   footer: {
     flexDirection: 'row',

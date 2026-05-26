@@ -371,15 +371,16 @@ export function RequirementsScreen() {
         <View style={styles.review}>
           <Text style={styles.reviewTitle}>Review</Text>
           <Text style={styles.reviewLine}>
-            {form.propertyType} · {form.city}
+            {form.propertyType} - {form.city}
           </Text>
           <Text style={styles.reviewLine}>
             Area: {form.area}
           </Text>
           {form.society && (
             <Text style={styles.reviewLine}>
-              {form.society} {form.phase ? `· ${form.phase}` : ''}{' '}
-              {form.block ? `· ${form.block}` : ''}
+              {form.society}
+              {form.phase ? ` - ${form.phase}` : ''}
+              {form.block ? ` - ${form.block}` : ''}
             </Text>
           )}
           {form.size && (
