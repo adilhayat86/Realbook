@@ -37,7 +37,7 @@ function SettingRow({
 }
 
 export function SettingsScreen({ navigation }: Props) {
-  const { role } = useAuth();
+  const { logout, role } = useAuth();
   const [pushNotif, setPushNotif] = useState(true);
   const [listingAlerts, setListingAlerts] = useState(true);
   const [messageNotif, setMessageNotif] = useState(true);
@@ -98,6 +98,18 @@ export function SettingsScreen({ navigation }: Props) {
             <Text style={styles.rowLabel}>Region</Text>
             <Text style={styles.version}>Pakistan</Text>
           </View>
+          <Pressable
+            style={styles.actionRow}
+            onPress={logout}
+            accessibilityRole="button"
+            accessibilityLabel="Logout"
+          >
+            <View style={styles.rowText}>
+              <Text style={[styles.rowLabel, styles.logoutText]}>Logout</Text>
+              <Text style={styles.rowSub}>Return to login</Text>
+            </View>
+            <Ionicons name="log-out-outline" size={20} color={colors.error} />
+          </Pressable>
         </View>
       </ScrollView>
     </View>
@@ -145,6 +157,10 @@ const styles = StyleSheet.create({
     padding: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
+  },
+  logoutText: {
+    color: colors.error,
+    fontWeight: '700',
   },
   version: { fontSize: 15, color: colors.textSecondary },
 });

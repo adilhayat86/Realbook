@@ -224,7 +224,7 @@ const SELECTOR_TITLES: Record<SelectorKey, string> = {
 
 export function PostScreen() {
   const { addListing, addRequirement, profile } = useApp();
-  const { role } = useAuth();
+  const { logout, role } = useAuth();
   const navigation = useNavigation();
   const [postMode, setPostMode] = useState<PostMode>('choice');
   const [currentStep, setCurrentStep] = useState(0);
@@ -318,7 +318,7 @@ export function PostScreen() {
             title={blockedCopy.button}
             onPress={() =>
               role === 'guest'
-                ? navigation.navigate('Login' as never)
+                ? logout()
                 : (navigation as any).navigate('Feed')
             }
             style={styles.guestBtn}
