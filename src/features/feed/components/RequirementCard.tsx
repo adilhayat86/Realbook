@@ -41,7 +41,7 @@ export function RequirementCard({ requirement }: RequirementCardProps) {
 
   return (
     <View style={styles.cardWrap}>
-      <View style={[styles.card, isUrgent && styles.urgentCard]}>
+      <View style={styles.card}>
         <View style={styles.header}>
           <View style={styles.badgeRow}>
             <View style={styles.typeBadge}>
@@ -123,18 +123,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderLeftWidth: 5,
-    borderLeftColor: colors.primaryDark,
+    borderWidth: 1.5,
+    borderColor: '#E8D28A',
     shadowColor: colors.shadowDark,
     shadowOpacity: 0.08,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
     elevation: 2,
-  },
-  urgentCard: {
-    borderLeftColor: colors.error,
   },
   header: {
     flexDirection: 'row',
@@ -154,7 +149,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: colors.tagBg,
+    backgroundColor: '#FFF7D6',
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 12,
