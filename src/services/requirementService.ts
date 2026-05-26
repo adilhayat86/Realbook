@@ -18,7 +18,8 @@ function normalizeRequirement(requirement: Requirement): Requirement {
   const society = cleanText(requirement.society) || undefined;
   const phase = cleanText(requirement.phase) || undefined;
   const block = cleanText(requirement.block) || undefined;
-  const area = cleanText(requirement.area) || society || phase || city || 'Open area';
+  const rawArea = cleanText(requirement.area);
+  const area = rawArea && rawArea !== city ? rawArea : society || phase || 'Open area';
   const description = cleanText(requirement.description);
 
   return {
