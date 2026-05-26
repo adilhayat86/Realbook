@@ -111,6 +111,8 @@ export function SignUpScreen() {
         expertiseAreas,
         visitingCardFront,
         visitingCardBack,
+        cnicFront,
+        cnicBack,
       });
       setSubmitting(false);
       if (!ok) {

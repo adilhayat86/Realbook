@@ -54,7 +54,7 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const [listings, setListings] = useState<Listing[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [profile, setProfile] = useState<UserProfile>(MOCK_USER);
@@ -94,7 +94,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     void loadAppData();
-  }, [loadAppData]);
+  }, [loadAppData, role, user?.id]);
 
   const addListing = useCallback(
     async (data: PostFormData) => {
