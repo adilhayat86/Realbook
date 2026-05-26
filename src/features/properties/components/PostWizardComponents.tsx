@@ -94,13 +94,21 @@ export function PostStepLayout({
         {children}
       </ScrollView>
       <View style={styles.footer}>
+        {isLast ? (
+          <View style={styles.reviewNotice}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={colors.primaryDark} />
+            <Text style={styles.reviewNoticeText}>
+              Review carefully before publishing. Valid listings appear in Feed and Search after submit.
+            </Text>
+          </View>
+        ) : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <View style={styles.footerActions}>
           {!isFirst ? (
-            <Button title="Back" variant="outline" onPress={onBack} style={styles.backButton} />
+            <Button title={isLast ? 'Edit' : 'Back'} variant="outline" onPress={onBack} style={styles.backButton} />
           ) : null}
           <Button
-            title={isLast ? (posting ? 'Posting...' : 'Submit Listing') : 'Next'}
+            title={isLast ? (posting ? 'Publishing...' : 'Publish Listing') : 'Next'}
             onPress={onNext}
             loading={posting}
             disabled={nextDisabled || posting}
@@ -412,6 +420,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
+  },
+  reviewNotice: {
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: colors.tagBg,
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+  },
+  reviewNoticeText: {
+    flex: 1,
+    color: colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
   },
   footerActions: {
     flexDirection: 'row',
