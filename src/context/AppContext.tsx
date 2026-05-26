@@ -43,7 +43,7 @@ interface AppContextType {
   addListing: (data: PostFormData) => void;
   removeListing: (listingId: string) => void;
   addRequirement: (requirement: Requirement) => void;
-  addComment: (listingId: string, text: string) => void;
+  addComment: (listingId: string, text: string) => Promise<void>;
   approveAgent: (agentId: string) => void;
   rejectAgent: (agentId: string) => void;
   toggleFollow: (agentId: string) => void;
@@ -53,6 +53,16 @@ interface AppContextType {
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+function withLiveCommentCounts(
+  listings: Listing[],
+  commentsByListing: Record<string, ListingComment[]>
+): Listing[] {
+  return listings.map((listing) => ({
+    ...listing,
+    commentCount: commentsByListing[listing.id]?.length ?? listing.commentCount,
+  }));
+}
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const { role, user } = useAuth();
@@ -84,11 +94,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         listingService.getRecordRoomListings(),
       ]);
 
-      setListings(storedListings);
+      setListings(withLiveCommentCounts(storedListings, storedComments));
       setAgents(storedAgents);
       setRequirements(storedRequirements);
       setCommentsByListing(storedComments);
-      setRecordRoomListings(storedRecordRoomListings);
+      setRecordRoomListings(withLiveCommentCounts(storedRecordRoomListings, storedComments));
     } finally {
       if (showGlobalLoading) {
         setIsLoading(false);
@@ -114,15 +124,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const removeListing = useCallback(async (listingId: string) => {
     const nextListings = await listingService.removeListing(listingId);
     const nextRecordRoomListings = await listingService.getRecordRoomListings();
-    setListings(nextListings);
-    setRecordRoomListings(nextRecordRoomListings);
+    const storedComments = await commentService.getCommentsByListing();
+    setListings(withLiveCommentCounts(nextListings, storedComments));
+    setRecordRoomListings(withLiveCommentCounts(nextRecordRoomListings, storedComments));
   }, []);
 
   const addRequirement = useCallback(
     async (requirement: Requirement) => {
       if (!canCreateRequirements(role)) return;
-      await requirementService.createRequirement(requirement);
-      setRequirements((prev) => [requirement, ...prev]);
+      const newRequirement = await requirementService.createRequirement(requirement);
+      setRequirements((prev) => [newRequirement, ...prev]);
     },
     [role]
   );
@@ -132,12 +143,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!canComment(role)) return;
       const newComment = await commentService.addComment(listingId, text, profile);
       const nextListings = await listingService.incrementCommentCount(listingId);
+      const nextRecordRoomListings = await listingService.getRecordRoomListings();
 
-      setCommentsByListing((prev) => ({
-        ...prev,
-        [listingId]: [newComment, ...(prev[listingId] ?? [])],
-      }));
-      setListings(nextListings);
+      setCommentsByListing((prev) => {
+        const nextComments = {
+          ...prev,
+          [listingId]: [newComment, ...(prev[listingId] ?? [])],
+        };
+        setListings(withLiveCommentCounts(nextListings, nextComments));
+        setRecordRoomListings(withLiveCommentCounts(nextRecordRoomListings, nextComments));
+        return nextComments;
+      });
     },
     [profile, role]
   );
