@@ -1,5 +1,6 @@
 import { UserRole } from '@/types';
-import { getStoredValue, setStoredValue } from '@/services/localRepository';
+import { getStoredValue, setStoredValue, updateStoredValue } from '@/services/localRepository';
+import { agentService } from '@/services/agentService';
 
 export interface AuthUser {
   id: string;
@@ -12,6 +13,8 @@ export interface AuthUser {
   expertiseAreas?: string[];
   visitingCardFront?: string;
   visitingCardBack?: string;
+  cnicFront?: string;
+  cnicBack?: string;
 }
 
 interface StoredAuthUser extends AuthUser {
@@ -28,6 +31,8 @@ export interface SignUpInput {
   expertiseAreas: string[];
   visitingCardFront?: string;
   visitingCardBack?: string;
+  cnicFront?: string;
+  cnicBack?: string;
 }
 
 const AUTH_USERS_KEY = 'authUsers';
@@ -87,8 +92,10 @@ export async function registerWithMobile(input: SignUpInput): Promise<AuthUser |
   }
 
   const storedUsers = await getStoredUsers();
+  const existingUser = storedUsers.find((user) => user.mobile === normalizedMobile);
+  const userId = existingUser?.id || `user-${Date.now()}`;
   const nextUser: StoredAuthUser = {
-    id: `user-${Date.now()}`,
+    id: userId,
     name: input.name.trim(),
     mobile: normalizedMobile,
     passcode: normalizedPasscode,
@@ -99,10 +106,39 @@ export async function registerWithMobile(input: SignUpInput): Promise<AuthUser |
     expertiseAreas: input.expertiseAreas,
     visitingCardFront: input.visitingCardFront,
     visitingCardBack: input.visitingCardBack,
+    cnicFront: input.cnicFront,
+    cnicBack: input.cnicBack,
   };
   const withoutDuplicate = storedUsers.filter((user) => user.mobile !== normalizedMobile);
   await setStoredValue(AUTH_USERS_KEY, [...withoutDuplicate, nextUser]);
+  await agentService.createPendingAgent({
+    id: userId,
+    name: nextUser.name,
+    mobile: normalizedMobile,
+    agency: nextUser.agency || '',
+    city: nextUser.city || '',
+    officeAddress: nextUser.officeAddress,
+    visitingCardFront: nextUser.visitingCardFront,
+    visitingCardBack: nextUser.visitingCardBack,
+    cnicFront: nextUser.cnicFront,
+    cnicBack: nextUser.cnicBack,
+  });
   return publicUser(nextUser);
+}
+
+export async function updateStoredAuthUserRole(
+  userId: string,
+  role: UserRole
+): Promise<AuthUser | null> {
+  let updatedUser: StoredAuthUser | null = null;
+  await updateStoredValue<StoredAuthUser[]>(AUTH_USERS_KEY, [], (current) =>
+    current.map((user) => {
+      if (user.id !== userId) return user;
+      updatedUser = { ...user, role };
+      return updatedUser;
+    })
+  );
+  return updatedUser ? publicUser(updatedUser) : null;
 }
 
 export async function resetPasscodeForMobile(mobile: string): Promise<boolean> {
