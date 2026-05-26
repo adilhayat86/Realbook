@@ -8,7 +8,6 @@ import { FeedListing, formatPublishDate } from '@/utils/feedRanking';
 import { Listing } from '@/types';
 import { FeedStackParamList, ProfileStackParamList } from '@/navigation/types';
 import { colors } from '@/theme/colors';
-import { TagChip } from '@/components/TagChip';
 
 type Nav = NativeStackNavigationProp<
   FeedStackParamList | ProfileStackParamList,
@@ -24,26 +23,10 @@ interface ListingCardProps {
   hideAgent?: boolean;
 }
 
-function Badge({
-  label,
-  icon,
-  tone = 'primary',
-}: {
-  label: string;
-  icon?: keyof typeof Ionicons.glyphMap;
-  tone?: 'primary' | 'neutral' | 'warning';
-}) {
-  const badgeStyle = [
-    styles.badge,
-    tone === 'neutral' && styles.badgeNeutral,
-    tone === 'warning' && styles.badgeWarning,
-  ];
-  const iconColor = tone === 'warning' ? colors.gray900 : tone === 'neutral' ? colors.textSecondary : colors.primaryDark;
-
+function MiniBadge({ label }: { label: string }) {
   return (
-    <View style={badgeStyle}>
-      {icon ? <Ionicons name={icon} size={11} color={iconColor} /> : null}
-      <Text style={[styles.badgeText, tone === 'warning' && styles.badgeWarningText]}>{label}</Text>
+    <View style={styles.miniBadge}>
+      <Text style={styles.miniBadgeText}>{label}</Text>
     </View>
   );
 }
@@ -53,7 +36,6 @@ export function ListingCard({ listing, popularityRank, hideAgent }: ListingCardP
   const [saved, setSaved] = useState(false);
   const navigation = useNavigation<Nav>();
 
-  const matchReasons = listing.matchReasons ?? [];
   const isPairPlot = listing.propertyType === 'Pair Plot';
   const sizeText = isPairPlot && listing.sizeEach
     ? `${listing.sizeEach} ${listing.sizeEachUnit || listing.sizeUnit} each`
@@ -64,69 +46,58 @@ export function ListingCard({ listing, popularityRank, hideAgent }: ListingCardP
     ? `Pair Plot ${listing.plotNumberOne} & ${listing.plotNumberTwo}`
     : listing.propertyType;
   const locationText = [listing.society, listing.phase, listing.block].filter(Boolean).join(' · ');
+  const topTag = listing.tags[0] ? formatTagLabel(listing.tags[0]) : 'Inventory';
 
-  const handleAgentPress = () => {
-    navigation.navigate('ProfileMain', { agentId: listing.agentId });
-  };
-
-  const handleCardPress = () => {
-    navigation.navigate('ListingDetail', { listingId: listing.id });
-  };
-
-  const handleCommentsPress = () => {
-    navigation.navigate('Comments', { listingId: listing.id });
-  };
+  const openAgent = () => navigation.navigate('ProfileMain', { agentId: listing.agentId });
+  const openDetails = () => navigation.navigate('ListingDetail', { listingId: listing.id });
+  const openComments = () => navigation.navigate('Comments', { listingId: listing.id });
 
   return (
     <View style={styles.cardWrap}>
       {popularityRank != null ? (
         <View style={styles.popularityRow}>
-          <View style={styles.rankBadge}>
-            <Text style={styles.rankText}>#{popularityRank}</Text>
-          </View>
-          <Text style={styles.popularityLabel}>
-            {popularityRank === 1 ? 'Most discussed' : 'Active discussion'} · {listing.commentCount} comment
-            {listing.commentCount !== 1 ? 's' : ''}
-          </Text>
+          <Text style={styles.popularityText}>#{popularityRank} · {listing.commentCount} comments</Text>
         </View>
       ) : null}
 
-      <View style={styles.card}>
+      <Pressable
+        style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+        onPress={openDetails}
+        accessibilityRole="button"
+        accessibilityLabel={`Open ${title}`}
+      >
         <View style={styles.topRow}>
           <View style={styles.badgeRow}>
-            <Badge label="Inventory" icon="home-outline" />
-            <Badge label="Verified Agent" icon="shield-checkmark-outline" tone="neutral" />
-            {listing.status === 'sold' ? <Badge label="Sold" icon="checkmark-circle-outline" tone="warning" /> : null}
+            <MiniBadge label="Inventory" />
+            <MiniBadge label={topTag} />
+            {listing.status === 'sold' ? <MiniBadge label="Sold" /> : null}
           </View>
           <Text style={styles.date}>{formatPublishDate(listing.publishedAt)}</Text>
         </View>
 
-        {matchReasons.length > 0 ? (
-          <View style={styles.matchRow}>
-            {matchReasons.includes('expertise') ? <Badge label="Matches expertise" icon="briefcase-outline" /> : null}
-            {matchReasons.includes('friend') ? (
-              <Badge label={listing.friendProximityLabel ?? 'Friend network'} icon="people-outline" />
-            ) : null}
-          </View>
-        ) : null}
-
         {!hideAgent ? (
           <Pressable
-            style={({ pressed }) => [styles.agentRow, pressed && styles.agentRowPressed]}
-            onPress={handleAgentPress}
+            style={({ pressed }) => [styles.agentRow, pressed && styles.agentPressed]}
+            onPress={(event) => {
+              event.stopPropagation();
+              openAgent();
+            }}
             accessibilityRole="button"
             accessibilityLabel={`Open ${listing.agentName} profile`}
           >
             {listing.agentPhoto ? (
               <Image source={{ uri: listing.agentPhoto }} style={styles.avatar} />
             ) : (
-              <View style={styles.avatar}>
+              <View style={styles.avatarFallback}>
                 <Text style={styles.avatarText}>{listing.agentName.charAt(0).toUpperCase()}</Text>
               </View>
             )}
-            <View style={styles.agentInfo}>
-              <Text style={styles.agentName}>{listing.agentName}</Text>
-              <Text style={styles.agency}>{listing.agentAgency}</Text>
+            <View style={styles.agentCopy}>
+              <View style={styles.agentNameRow}>
+                <Text style={styles.agentName} numberOfLines={1}>{listing.agentName}</Text>
+                <Ionicons name="shield-checkmark" size={13} color={colors.primaryDark} />
+              </View>
+              <Text style={styles.agency} numberOfLines={1}>{listing.agentAgency}</Text>
             </View>
             <View style={styles.iconActions}>
               <Pressable
@@ -138,11 +109,7 @@ export function ListingCard({ listing, popularityRank, hideAgent }: ListingCardP
                 accessibilityRole="button"
                 accessibilityLabel={liked ? 'Unlike listing' : 'Like listing'}
               >
-                <Ionicons
-                  name={liked ? 'heart' : 'heart-outline'}
-                  size={19}
-                  color={liked ? colors.error : colors.textMuted}
-                />
+                <Ionicons name={liked ? 'heart' : 'heart-outline'} size={18} color={liked ? colors.error : colors.textMuted} />
               </Pressable>
               <Pressable
                 onPress={(event) => {
@@ -153,95 +120,61 @@ export function ListingCard({ listing, popularityRank, hideAgent }: ListingCardP
                 accessibilityRole="button"
                 accessibilityLabel={saved ? 'Unsave listing' : 'Save listing'}
               >
-                <Ionicons
-                  name={saved ? 'bookmark' : 'bookmark-outline'}
-                  size={19}
-                  color={saved ? colors.primary : colors.textMuted}
-                />
+                <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={18} color={saved ? colors.primaryDark : colors.textMuted} />
               </Pressable>
             </View>
           </Pressable>
         ) : null}
 
-        <Pressable
-          onPress={handleCardPress}
-          style={({ pressed }) => [styles.content, pressed && styles.contentPressed]}
-          accessibilityRole="button"
-          accessibilityLabel={`Open ${title}`}
-        >
+        <View style={styles.bodyRow}>
           {listing.images && listing.images.length > 0 ? (
-            <Image source={{ uri: listing.images[0] }} style={styles.photo} resizeMode="cover" />
+            <Image source={{ uri: listing.images[0] }} style={styles.thumb} resizeMode="cover" />
           ) : (
-            <View style={styles.photoPlaceholder}>
-              <Ionicons name="image-outline" size={32} color={colors.textMuted} />
-              <Text style={styles.photoPlaceholderText}>Property Photo</Text>
+            <View style={styles.thumbPlaceholder}>
+              <Ionicons name="image-outline" size={24} color={colors.textMuted} />
             </View>
           )}
 
-          <View style={styles.titleRow}>
-            <View style={styles.titleCopy}>
-              <Text style={styles.propertyTitle} numberOfLines={1}>{title}</Text>
-              <Text style={styles.locationLine} numberOfLines={1}>{locationText || listing.city}</Text>
+          <View style={styles.mainCopy}>
+            <View style={styles.titleRow}>
+              <Text style={styles.title} numberOfLines={1}>{title}</Text>
+              <Text style={styles.price}>{formatPrice(listing.price)}</Text>
             </View>
-            <Text style={styles.price}>{formatPrice(listing.price)}</Text>
-          </View>
-
-          <View style={styles.infoGrid}>
-            <View style={styles.infoPill}>
-              <Ionicons name="resize-outline" size={13} color={colors.textSecondary} />
-              <Text style={styles.infoText}>{sizeText}</Text>
-            </View>
-            <View style={styles.infoPill}>
-              <Ionicons name="location-outline" size={13} color={colors.textSecondary} />
-              <Text style={styles.infoText}>{listing.city}</Text>
+            <Text style={styles.location} numberOfLines={1}>{locationText || listing.city}</Text>
+            <View style={styles.metaRow}>
+              <Text style={styles.metaText}>{sizeText}</Text>
+              <Text style={styles.metaDot}>•</Text>
+              <Text style={styles.metaText}>{listing.city}</Text>
             </View>
             {listing.possessionStatus ? (
-              <View style={styles.infoPillWide}>
-                <Ionicons name="key-outline" size={13} color={colors.textSecondary} />
-                <Text style={styles.infoText}>{listing.possessionStatus}</Text>
-              </View>
+              <Text style={styles.status} numberOfLines={1}>{listing.possessionStatus}</Text>
             ) : null}
           </View>
-
-          {listing.tags.length > 0 ? (
-            <View style={styles.tags}>
-              {listing.tags.slice(0, 4).map((tag) => (
-                <TagChip key={tag} label={formatTagLabel(tag)} small />
-              ))}
-            </View>
-          ) : null}
-        </Pressable>
+        </View>
 
         <View style={styles.footer}>
           <Pressable
-            style={styles.footerBtn}
-            onPress={handleCommentsPress}
+            style={styles.footerAction}
+            onPress={(event) => {
+              event.stopPropagation();
+              openComments();
+            }}
             accessibilityRole="button"
             accessibilityLabel="Open comments"
           >
-            <Ionicons name="chatbubble-outline" size={15} color={colors.textSecondary} />
-            <Text style={styles.footerText}>{listing.commentCount} comments</Text>
+            <Ionicons name="chatbubble-outline" size={14} color={colors.textSecondary} />
+            <Text style={styles.footerText}>{listing.commentCount}</Text>
           </Pressable>
-          <Pressable
-            style={styles.footerBtn}
-            onPress={handleCardPress}
-            accessibilityRole="button"
-            accessibilityLabel="Open offers"
-          >
-            <Ionicons name="pricetag-outline" size={15} color={colors.textSecondary} />
-            <Text style={styles.footerText}>{listing.offerCount} offer{listing.offerCount !== 1 ? 's' : ''}</Text>
-          </Pressable>
-          <Pressable
-            style={styles.detailsBtn}
-            onPress={handleCardPress}
-            accessibilityRole="button"
-            accessibilityLabel="View listing details"
-          >
-            <Text style={styles.detailsText}>Details</Text>
+          <View style={styles.footerAction}>
+            <Ionicons name="pricetag-outline" size={14} color={colors.textSecondary} />
+            <Text style={styles.footerText}>{listing.offerCount} offers</Text>
+          </View>
+          <View style={styles.detailsAction}>
+            <Text style={styles.detailsText}>View</Text>
             <Ionicons name="chevron-forward" size={14} color={colors.primaryDark} />
-          </Pressable>
+          </View>
         </View>
-      </View>
+      </Pressable>
     </View>
   );
 }
@@ -250,235 +183,204 @@ export default React.memo(ListingCard);
 
 const styles = StyleSheet.create({
   cardWrap: {
-    marginHorizontal: 12,
-    marginVertical: 6,
+    marginHorizontal: 10,
+    marginVertical: 5,
   },
   popularityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 5,
-    gap: 8,
+    marginBottom: 4,
+    paddingHorizontal: 4,
   },
-  rankBadge: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-  },
-  rankText: {
-    color: colors.white,
+  popularityText: {
     fontSize: 11,
-    fontWeight: '800',
-  },
-  popularityLabel: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    fontWeight: '600',
+    color: colors.textMuted,
+    fontWeight: '700',
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
+    borderRadius: 14,
+    padding: 11,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     shadowColor: colors.shadowDark,
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 1,
+  },
+  cardPressed: {
+    opacity: 0.9,
   },
   topRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 8,
     marginBottom: 8,
+    gap: 8,
   },
   badgeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 5,
     flex: 1,
   },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.tagBg,
-    borderRadius: 12,
+  miniBadge: {
+    backgroundColor: colors.gray50,
+    borderRadius: 999,
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
-  badgeNeutral: {
-    backgroundColor: colors.gray100,
-  },
-  badgeWarning: {
-    backgroundColor: '#FEF3C7',
-  },
-  badgeText: {
-    fontSize: 10,
+  miniBadgeText: {
+    fontSize: 9,
     fontWeight: '900',
     color: colors.primaryDark,
     textTransform: 'uppercase',
-  },
-  badgeWarningText: {
-    color: colors.gray900,
+    letterSpacing: 0.2,
   },
   date: {
     fontSize: 10,
     color: colors.textMuted,
-    marginTop: 4,
-  },
-  matchRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 8,
+    fontWeight: '600',
   },
   agentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 9,
   },
-  agentRowPressed: {
-    opacity: 0.7,
+  agentPressed: {
+    opacity: 0.75,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    marginRight: 9,
+  },
+  avatarFallback: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 9,
   },
   avatarText: {
     color: colors.white,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '900',
   },
-  agentInfo: {
+  agentCopy: {
     flex: 1,
   },
+  agentNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   agentName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
     color: colors.text,
+    maxWidth: '88%',
   },
   agency: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textSecondary,
     marginTop: 1,
   },
   iconActions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 11,
     alignItems: 'center',
   },
-  content: {
-    borderRadius: 12,
+  bodyRow: {
+    flexDirection: 'row',
+    gap: 10,
   },
-  contentPressed: {
-    opacity: 0.85,
-  },
-  photoPlaceholder: {
+  thumb: {
+    width: 82,
+    height: 82,
+    borderRadius: 11,
     backgroundColor: colors.inputBg,
-    height: 126,
-    borderRadius: 12,
+  },
+  thumbPlaceholder: {
+    width: 82,
+    height: 82,
+    borderRadius: 11,
+    backgroundColor: colors.inputBg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
   },
-  photoPlaceholderText: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginTop: 4,
-  },
-  photo: {
-    width: '100%',
-    height: 126,
-    borderRadius: 12,
-    marginBottom: 10,
+  mainCopy: {
+    flex: 1,
+    minHeight: 82,
+    justifyContent: 'center',
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
-    marginBottom: 8,
+    gap: 8,
   },
-  titleCopy: {
+  title: {
     flex: 1,
-  },
-  propertyTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '900',
     color: colors.text,
   },
-  locationLine: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
   price: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '900',
     color: colors.primary,
   },
-  infoGrid: {
+  location: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 3,
+  },
+  metaRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 7,
-    marginBottom: 8,
-  },
-  infoPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginTop: 5,
     gap: 5,
-    backgroundColor: colors.gray50,
-    borderRadius: 10,
-    paddingHorizontal: 9,
-    paddingVertical: 6,
   },
-  infoPillWide: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: colors.gray50,
-    borderRadius: 10,
-    paddingHorizontal: 9,
-    paddingVertical: 6,
-    maxWidth: '100%',
-  },
-  infoText: {
+  metaText: {
     fontSize: 11,
     color: colors.textSecondary,
     fontWeight: '700',
   },
-  tags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 1,
+  metaDot: {
+    color: colors.textMuted,
+    fontSize: 11,
+  },
+  status: {
+    fontSize: 11,
+    color: colors.primaryDark,
+    fontWeight: '800',
+    marginTop: 5,
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 14,
     marginTop: 10,
-    paddingTop: 10,
+    paddingTop: 9,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
-    gap: 12,
   },
-  footerBtn: {
+  footerAction: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
   footerText: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textSecondary,
     fontWeight: '700',
   },
-  detailsBtn: {
+  detailsAction: {
     marginLeft: 'auto',
     flexDirection: 'row',
     alignItems: 'center',
