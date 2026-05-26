@@ -17,7 +17,7 @@ import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/theme/colors';
 
 export function LoginScreen() {
-  const { login, resetPassword, getRememberedLogin } = useAuth();
+  const { login, continueAsGuest, resetPassword, getRememberedLogin } = useAuth();
   const navigation = useNavigation();
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
@@ -77,6 +77,14 @@ export function LoginScreen() {
     } else {
       setError('Could not open admin demo account.');
     }
+  };
+
+  const handleContinueAsGuest = async () => {
+    setError('');
+    setNotice('');
+    setLoading(true);
+    await continueAsGuest();
+    setLoading(false);
   };
 
   const handleForgotPassword = async () => {
@@ -168,6 +176,14 @@ export function LoginScreen() {
           style={styles.adminBtn}
         />
 
+        <Button
+          title="Continue as Guest"
+          onPress={handleContinueAsGuest}
+          loading={loading}
+          variant="outline"
+          style={styles.guestBtn}
+        />
+
         <Pressable onPress={() => navigation.navigate('SignUp' as never)} style={styles.signupLink}>
           <Text style={styles.signupLinkText}>
             Don't have an account? Sign Up
@@ -175,7 +191,7 @@ export function LoginScreen() {
         </Pressable>
 
         <Text style={styles.hint}>
-          Demo: any 10+ digit number with 4+ character password
+          Guests can browse and search. Login is required to post, comment, follow or chat.
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -267,12 +283,16 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
     marginTop: 20,
+    lineHeight: 17,
   },
   signupLink: {
     marginTop: 16,
     alignSelf: 'center',
   },
   adminBtn: {
+    marginTop: 12,
+  },
+  guestBtn: {
     marginTop: 12,
   },
   signupLinkText: {
