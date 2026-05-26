@@ -10,6 +10,7 @@ import { PostScreen } from '@/features/properties/screens/PostScreen';
 import { AgentsScreen } from '@/features/agents/screens/AgentsScreen';
 import { ProfileScreen } from '@/features/agents/screens/ProfileScreen';
 import { EditProfileScreen } from '@/features/agents/screens/EditProfileScreen';
+import { GuestProfileScreen } from '@/features/auth/screens/GuestProfileScreen';
 import { ListingDetailScreen } from '@/features/properties/screens/ListingDetailScreen';
 import { CommentsScreen } from '@/features/properties/screens/CommentsScreen';
 import { useAuth } from '@/context/AuthContext';
@@ -39,6 +40,7 @@ const TAB_BAR_CONTENT_HEIGHT = 56;
 export function MainTabs() {
   const { role } = useAuth();
   const isAdmin = role === 'admin';
+  const isGuest = role === 'guest';
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(
     insets.bottom,
@@ -72,6 +74,7 @@ export function MainTabs() {
             Agents: focused ? 'people' : 'people-outline',
             Admin: focused ? 'shield-checkmark' : 'shield-checkmark-outline',
             Profile: focused ? 'person' : 'person-outline',
+            Join: focused ? 'log-in' : 'log-in-outline',
           };
           return (
             <Ionicons name={icons[route.name]} size={size} color={color} />
@@ -92,6 +95,12 @@ export function MainTabs() {
           name="Admin"
           component={AdminNavigator}
           options={{ tabBarLabel: 'Admin' }}
+        />
+      ) : isGuest ? (
+        <Tab.Screen
+          name="Join"
+          component={GuestProfileScreen}
+          options={{ tabBarLabel: 'Join' }}
         />
       ) : (
         <Tab.Screen
