@@ -8,6 +8,7 @@ import { FeedListing, formatPublishDate } from '@/utils/feedRanking';
 import { Listing } from '@/types';
 import { FeedStackParamList, ProfileStackParamList } from '@/navigation/types';
 import { colors } from '@/theme/colors';
+import { SavedBookmarkButton } from './SavedBookmarkButton';
 
 type Nav = NativeStackNavigationProp<
   FeedStackParamList | ProfileStackParamList,
@@ -44,7 +45,6 @@ function StatPill({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label
 
 export function ListingCard({ listing, popularityRank, hideAgent }: ListingCardProps) {
   const [liked, setLiked] = useState(false);
-  const [saved, setSaved] = useState(false);
   const navigation = useNavigation<Nav>();
 
   const isPairPlot = listing.propertyType === 'Pair Plot';
@@ -142,17 +142,7 @@ export function ListingCard({ listing, popularityRank, hideAgent }: ListingCardP
                 <Ionicons name={liked ? 'heart' : 'heart-outline'} size={19} color={liked ? colors.error : colors.textMuted} />
               </Pressable>
             ) : null}
-            <Pressable
-              onPress={(event) => {
-                event.stopPropagation();
-                setSaved((value) => !value);
-              }}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={saved ? 'Unsave listing' : 'Save listing'}
-            >
-              <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={19} color={saved ? colors.primaryDark : colors.textMuted} />
-            </Pressable>
+            <SavedBookmarkButton listingId={listing.id} listingOwnerId={listing.agentId} />
           </View>
         </View>
 
