@@ -88,8 +88,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const registeredUser = await registerWithMobile(input);
     if (!registeredUser) return false;
 
-    if (!remember) {
+    setUser(registeredUser);
+    if (remember) {
+      await authSessionService.saveSession(registeredUser);
+      await authSessionService.saveRememberedCredentials({
+        mobile: registeredUser.mobile,
+        passcode: input.passcode.trim(),
+      });
+    } else {
       await authSessionService.clearSession();
+      await authSessionService.clearRememberedCredentials();
     }
     return true;
   };
