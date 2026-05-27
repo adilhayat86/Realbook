@@ -1,3 +1,4 @@
+import { cloudRequirementService } from '@/services/cloudRequirementService';
 import { getStoredValue, updateStoredValue } from '@/services/localRepository';
 import { Requirement } from '@/types';
 
@@ -11,6 +12,12 @@ function cleanText(value?: string): string {
 function cleanNumberText(value?: string): string | undefined {
   const cleaned = String(value ?? '').replace(/[^0-9]/g, '');
   return cleaned || undefined;
+}
+
+function sortNewestFirst(requirements: Requirement[]): Requirement[] {
+  return [...requirements].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 }
 
 function normalizeRequirement(requirement: Requirement): Requirement {
@@ -57,10 +64,13 @@ function validateRequirement(requirement: Requirement): string[] {
 
 export const requirementService = {
   async getRequirements(): Promise<Requirement[]> {
+    if (cloudRequirementService.isReady()) {
+      const cloudRequirements = await cloudRequirementService.getRequirements();
+      if (cloudRequirements) return cloudRequirements;
+    }
+
     const requirements = await getStoredValue<Requirement[]>(REQUIREMENTS_KEY, INITIAL_REQUIREMENTS);
-    return requirements.sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    return sortNewestFirst(requirements);
   },
 
   async createRequirement(requirement: Requirement): Promise<Requirement> {
@@ -69,6 +79,11 @@ export const requirementService = {
 
     if (errors.length > 0) {
       throw new Error(`Invalid requirement: ${errors.join(' ')}`);
+    }
+
+    if (cloudRequirementService.isReady()) {
+      const cloudRequirement = await cloudRequirementService.createRequirement(normalizedRequirement);
+      if (cloudRequirement) return cloudRequirement;
     }
 
     await updateStoredValue<Requirement[]>(
