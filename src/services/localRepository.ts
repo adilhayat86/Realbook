@@ -7,6 +7,13 @@ export interface StoredValueResult<T> {
   recovered: boolean;
 }
 
+export class LocalStorageError extends Error {
+  constructor(message: string, public readonly cause?: unknown) {
+    super(message);
+    this.name = 'LocalStorageError';
+  }
+}
+
 function storageKeyFor(key: string) {
   return `${STORAGE_PREFIX}${key}`;
 }
@@ -20,7 +27,7 @@ async function seedStoredValue<T>(storageKey: string, seed: T): Promise<T> {
   try {
     await AsyncStorage.setItem(storageKey, JSON.stringify(seededValue));
   } catch (error) {
-    console.warn(`Realbook storage seed failed for ${storageKey}`, error);
+    throw new LocalStorageError(`Realbook could not initialize local storage for ${storageKey}.`, error);
   }
   return seededValue;
 }
@@ -76,7 +83,7 @@ export async function setStoredValue<T>(key: string, value: T): Promise<T> {
   try {
     await AsyncStorage.setItem(storageKeyFor(key), JSON.stringify(value));
   } catch (error) {
-    console.warn(`Realbook storage write failed for ${key}`, error);
+    throw new LocalStorageError(`Realbook could not save ${key}. Please try again.`, error);
   }
   return value;
 }
