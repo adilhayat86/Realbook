@@ -7,6 +7,7 @@ export type FeedStackParamList = {
   Settings: undefined;
   AddInventory: undefined;
   MyProperties: undefined;
+  EditListing: { listingId: string };
   SavedListings: undefined;
   Help: undefined;
   About: undefined;
