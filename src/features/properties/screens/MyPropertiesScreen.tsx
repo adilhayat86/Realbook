@@ -154,8 +154,9 @@ export function MyPropertiesScreen({ navigation }: Props) {
             helper: 'Coming next: edit price, photos, tags and notes.',
             tone: 'neutral',
             onPress: () => {
+              const listingId = selectedListing.id;
               setSelectedListing(null);
-              setFeedback('Edit Listing is next in the build plan.');
+              navigation.navigate('EditListing', { listingId });
             },
           })}
           {renderAction({
