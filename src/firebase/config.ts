@@ -1,32 +1,47 @@
-// Firebase Configuration
-// TODO: Replace with actual Firebase project credentials
-// Get credentials from Firebase Console: https://console.firebase.google.com/
-
-import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
+import { Auth, getAuth } from 'firebase/auth';
+import { Firestore, getFirestore } from 'firebase/firestore';
+import { hasFirebaseEnv } from './status';
 
 const firebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'YOUR_API_KEY',
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 'YOUR_AUTH_DOMAIN',
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'YOUR_PROJECT_ID',
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || 'YOUR_STORAGE_BUCKET',
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || 'YOUR_MESSAGING_SENDER_ID',
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || 'YOUR_APP_ID',
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || '',
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || '',
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '',
 };
 
-let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let db: Firestore | null = null;
 
-if (!getApps().length) {
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
-} else {
-  app = getApps()[0];
-  auth = getAuth(app);
-  db = getFirestore(app);
+export function getConfiguredFirebaseApp(): FirebaseApp | null {
+  if (!hasFirebaseEnv()) return null;
+  if (app) return app;
+
+  app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  return app;
+}
+
+export function getConfiguredFirebaseAuth(): Auth | null {
+  if (auth) return auth;
+
+  const firebaseApp = getConfiguredFirebaseApp();
+  if (!firebaseApp) return null;
+
+  auth = getAuth(firebaseApp);
+  return auth;
+}
+
+export function getConfiguredFirestore(): Firestore | null {
+  if (db) return db;
+
+  const firebaseApp = getConfiguredFirebaseApp();
+  if (!firebaseApp) return null;
+
+  db = getFirestore(firebaseApp);
+  return db;
 }
 
 export { app, auth, db };
