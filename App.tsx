@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from './src/context/AuthContext';
 import { AppProvider } from './src/context/AppContext';
 import { AppNavigator } from './src/navigation/AppNavigator';
+import { AppErrorBannerHost } from './src/components/AppErrorBannerHost';
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
         <AppProvider>
           <StatusBar style="light" />
           <AppNavigator />
+          <AppErrorBannerHost />
         </AppProvider>
       </AuthProvider>
     </SafeAreaProvider>
