@@ -143,6 +143,10 @@ export function ListingDetailScreen({ navigation, route }: Props) {
     (navigation as any).navigate('ProfileMain', { agentId: listing.agentId });
   };
 
+  const goToEditListing = () => {
+    (navigation as any).navigate('EditListing', { listingId: listing.id });
+  };
+
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
   };
@@ -318,10 +322,11 @@ export function ListingDetailScreen({ navigation, route }: Props) {
                       })
                     }
                   />
-                  <ActionButton icon="create-outline" label="Edit Soon" onPress={() => setOwnerFeedback('Edit Listing is next in the build plan.')} />
+                  <ActionButton icon="create-outline" label="Edit Listing" onPress={goToEditListing} />
                 </>
               ) : listingStatus === 'sold' ? (
                 <>
+                  <ActionButton icon="create-outline" label="Edit Listing" onPress={goToEditListing} />
                   <ActionButton
                     icon="refresh-outline"
                     label="Reactivate"
@@ -352,20 +357,23 @@ export function ListingDetailScreen({ navigation, route }: Props) {
                   />
                 </>
               ) : (
-                <ActionButton
-                  icon="return-up-back-outline"
-                  label="Restore"
-                  primary
-                  onPress={() =>
-                    confirmOwnerStatus({
-                      status: 'active',
-                      message: 'Listing restored to Active.',
-                      title: 'Restore listing?',
-                      body: `${ownerListingTitle} will return to Active inventory.`,
-                      confirmLabel: 'Restore',
-                    })
-                  }
-                />
+                <>
+                  <ActionButton icon="create-outline" label="Edit Listing" onPress={goToEditListing} />
+                  <ActionButton
+                    icon="return-up-back-outline"
+                    label="Restore"
+                    primary
+                    onPress={() =>
+                      confirmOwnerStatus({
+                        status: 'active',
+                        message: 'Listing restored to Active.',
+                        title: 'Restore listing?',
+                        body: `${ownerListingTitle} will return to Active inventory.`,
+                        confirmLabel: 'Restore',
+                      })
+                    }
+                  />
+                </>
               )}
             </View>
           </View>
