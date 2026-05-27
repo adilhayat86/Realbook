@@ -1,4 +1,5 @@
 import { MOCK_AGENTS } from '@/data/mockData';
+import { cloudAgentService } from '@/services/cloudAgentService';
 import { getStoredValue, setStoredValue, updateStoredValue } from '@/services/localRepository';
 import { Agent } from '@/types';
 
@@ -112,6 +113,11 @@ function normalizeSignupDocument(
 
 export const agentService = {
   async getAgents(): Promise<Agent[]> {
+    if (cloudAgentService.isReady()) {
+      const cloudAgents = await cloudAgentService.getAgents();
+      if (cloudAgents) return cloudAgents;
+    }
+
     const storedAgents = await getStoredValue<Agent[]>(AGENTS_KEY, MOCK_AGENTS);
     const nextAgents = seedAgentDocuments(storedAgents);
     if (JSON.stringify(nextAgents) !== JSON.stringify(storedAgents)) {
@@ -121,6 +127,11 @@ export const agentService = {
   },
 
   async createPendingAgent(input: PendingAgentInput): Promise<Agent[]> {
+    if (cloudAgentService.isReady()) {
+      const cloudAgents = await cloudAgentService.createPendingAgent(input);
+      if (cloudAgents) return cloudAgents;
+    }
+
     const submittedAt = new Date().toLocaleString('en-PK', {
       month: 'short',
       day: 'numeric',
@@ -166,6 +177,11 @@ export const agentService = {
   },
 
   async updateAgentStatus(agentId: string, status: AgentStatus): Promise<Agent[]> {
+    if (cloudAgentService.isReady()) {
+      const cloudAgents = await cloudAgentService.updateAgentStatus(agentId, status);
+      if (cloudAgents) return cloudAgents;
+    }
+
     const nextAgents = await updateStoredValue<Agent[]>(AGENTS_KEY, MOCK_AGENTS, (current) =>
       seedAgentDocuments(current).map((agent) =>
         agent.id === agentId
@@ -177,6 +193,11 @@ export const agentService = {
   },
 
   async toggleFollow(agentId: string): Promise<Agent[]> {
+    if (cloudAgentService.isReady()) {
+      const cloudAgents = await cloudAgentService.toggleFollow(agentId);
+      if (cloudAgents) return cloudAgents;
+    }
+
     const nextAgents = await updateStoredValue<Agent[]>(AGENTS_KEY, MOCK_AGENTS, (current) =>
       seedAgentDocuments(current).map((agent) =>
         agent.id === agentId
