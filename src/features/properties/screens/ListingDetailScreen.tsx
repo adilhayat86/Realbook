@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -29,6 +30,10 @@ function getListingStatus(listing: Listing): ListingBucket {
   if (listing.status === 'sold') return 'sold';
   if (listing.status === 'archive') return 'archive';
   return 'active';
+}
+
+function listingTitle(listing: Listing) {
+  return [listing.propertyType, listing.society, listing.phase].filter(Boolean).join(' · ');
 }
 
 function Field({ label, value }: { label: string; value?: string | number }) {
@@ -140,6 +145,33 @@ export function ListingDetailScreen({ navigation, route }: Props) {
     setOwnerFeedback(message);
   };
 
+  const confirmOwnerStatus = ({
+    status,
+    message,
+    title: confirmTitle,
+    body,
+    confirmLabel,
+    destructive,
+  }: {
+    status: ListingBucket;
+    message: string;
+    title: string;
+    body: string;
+    confirmLabel: string;
+    destructive?: boolean;
+  }) => {
+    Alert.alert(confirmTitle, body, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: confirmLabel,
+        style: destructive ? 'destructive' : 'default',
+        onPress: () => void updateOwnerStatus(status, message),
+      },
+    ]);
+  };
+
+  const ownerListingTitle = listingTitle(listing);
+
   return (
     <View style={styles.container}>
       <BackHeader title="Property Details" onBack={() => navigation.goBack()} />
@@ -248,18 +280,95 @@ export function ListingDetailScreen({ navigation, route }: Props) {
             <View style={styles.actionsGrid}>
               {listingStatus === 'active' ? (
                 <>
-                  <ActionButton icon="refresh-outline" label="Refresh" primary onPress={() => updateOwnerStatus('active', 'Listing refreshed.')} />
-                  <ActionButton icon="checkmark-done-outline" label="Mark as Sold" onPress={() => updateOwnerStatus('sold', 'Listing moved to Sold.')} />
-                  <ActionButton icon="archive-outline" label="Archive" onPress={() => updateOwnerStatus('archive', 'Listing archived.')} />
+                  <ActionButton
+                    icon="refresh-outline"
+                    label="Refresh"
+                    primary
+                    onPress={() =>
+                      confirmOwnerStatus({
+                        status: 'active',
+                        message: 'Listing refreshed.',
+                        title: 'Refresh listing?',
+                        body: `${ownerListingTitle} will stay active and move up as recently checked.`,
+                        confirmLabel: 'Refresh',
+                      })
+                    }
+                  />
+                  <ActionButton
+                    icon="checkmark-done-outline"
+                    label="Mark as Sold"
+                    onPress={() =>
+                      confirmOwnerStatus({
+                        status: 'sold',
+                        message: 'Listing moved to Sold.',
+                        title: 'Mark listing as sold?',
+                        body: `${ownerListingTitle} will be removed from active search and saved in Sold.`,
+                        confirmLabel: 'Mark Sold',
+                      })
+                    }
+                  />
+                  <ActionButton
+                    icon="archive-outline"
+                    label="Archive"
+                    onPress={() =>
+                      confirmOwnerStatus({
+                        status: 'archive',
+                        message: 'Listing archived.',
+                        title: 'Archive listing?',
+                        body: `${ownerListingTitle} will be removed from active inventory. You can restore it later.`,
+                        confirmLabel: 'Archive',
+                        destructive: true,
+                      })
+                    }
+                  />
                   <ActionButton icon="create-outline" label="Edit Soon" onPress={() => setOwnerFeedback('Edit Listing is next in the build plan.')} />
                 </>
               ) : listingStatus === 'sold' ? (
                 <>
-                  <ActionButton icon="refresh-outline" label="Reactivate" primary onPress={() => updateOwnerStatus('active', 'Listing reactivated.')} />
-                  <ActionButton icon="archive-outline" label="Archive" onPress={() => updateOwnerStatus('archive', 'Listing archived.')} />
+                  <ActionButton
+                    icon="refresh-outline"
+                    label="Reactivate"
+                    primary
+                    onPress={() =>
+                      confirmOwnerStatus({
+                        status: 'active',
+                        message: 'Listing reactivated.',
+                        title: 'Reactivate listing?',
+                        body: `${ownerListingTitle} will return to Active inventory.`,
+                        confirmLabel: 'Reactivate',
+                      })
+                    }
+                  />
+                  <ActionButton
+                    icon="archive-outline"
+                    label="Archive"
+                    onPress={() =>
+                      confirmOwnerStatus({
+                        status: 'archive',
+                        message: 'Listing archived.',
+                        title: 'Archive sold listing?',
+                        body: `${ownerListingTitle} will move from Sold to Archived.`,
+                        confirmLabel: 'Archive',
+                        destructive: true,
+                      })
+                    }
+                  />
                 </>
               ) : (
-                <ActionButton icon="return-up-back-outline" label="Restore" primary onPress={() => updateOwnerStatus('active', 'Listing restored to Active.')} />
+                <ActionButton
+                  icon="return-up-back-outline"
+                  label="Restore"
+                  primary
+                  onPress={() =>
+                    confirmOwnerStatus({
+                      status: 'active',
+                      message: 'Listing restored to Active.',
+                      title: 'Restore listing?',
+                      body: `${ownerListingTitle} will return to Active inventory.`,
+                      confirmLabel: 'Restore',
+                    })
+                  }
+                />
               )}
             </View>
           </View>
