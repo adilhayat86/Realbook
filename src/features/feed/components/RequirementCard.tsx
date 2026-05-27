@@ -5,13 +5,13 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { Requirement } from '@/types';
 import { colors } from '@/theme/colors';
-import { ProfileStackParamList } from '@/navigation/types';
+import { FeedStackParamList, ProfileStackParamList } from '@/navigation/types';
 
 interface RequirementCardProps {
   requirement: Requirement;
 }
 
-type ProfileNav = NativeStackNavigationProp<ProfileStackParamList, 'ProfileMain'>;
+type Nav = NativeStackNavigationProp<FeedStackParamList | ProfileStackParamList, 'ProfileMain'>;
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -28,36 +28,41 @@ function budgetText(requirement: Requirement) {
   return `Max ${requirement.maxPrice}`;
 }
 
+function InfoPill({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
+  return (
+    <View style={styles.infoPill}>
+      <Ionicons name={icon} size={12} color="#8A6414" />
+      <Text style={styles.infoText} numberOfLines={1}>{label}</Text>
+    </View>
+  );
+}
+
 export function RequirementCard({ requirement }: RequirementCardProps) {
-  const navigation = useNavigation<ProfileNav>();
+  const navigation = useNavigation<Nav>();
   const isUrgent = requirement.urgency === 'Urgent';
   const location = [requirement.society || requirement.area, requirement.phase, requirement.block]
     .filter(Boolean)
     .join(' · ');
 
   const handleAgentPress = () => {
-    navigation.navigate('ProfileMain', { agentId: requirement.agentId });
+    (navigation as any).navigate('ProfileMain', { agentId: requirement.agentId });
   };
 
   return (
     <View style={styles.cardWrap}>
-      <View style={styles.card}>
+      <View style={[styles.card, isUrgent && styles.cardUrgent]}>
+        <View style={styles.goldAccent} />
+
         <View style={styles.header}>
           <View style={styles.badgeRow}>
             <View style={styles.typeBadge}>
-              <Ionicons name="megaphone-outline" size={12} color={colors.primaryDark} />
+              <Ionicons name="megaphone-outline" size={12} color="#8A6414" />
               <Text style={styles.typeText}>Requirement</Text>
             </View>
-            {isUrgent ? (
-              <View style={styles.urgentBadge}>
-                <Ionicons name="flash" size={11} color={colors.white} />
-                <Text style={styles.urgentText}>Urgent</Text>
-              </View>
-            ) : (
-              <View style={styles.normalBadge}>
-                <Text style={styles.normalText}>Normal</Text>
-              </View>
-            )}
+            <View style={isUrgent ? styles.urgentBadge : styles.normalBadge}>
+              {isUrgent ? <Ionicons name="flash" size={11} color={colors.white} /> : null}
+              <Text style={isUrgent ? styles.urgentText : styles.normalText}>{requirement.urgency}</Text>
+            </View>
           </View>
           <Text style={styles.date}>{formatDate(requirement.createdAt)}</Text>
         </View>
@@ -72,39 +77,47 @@ export function RequirementCard({ requirement }: RequirementCardProps) {
             <Text style={styles.avatarText}>{requirement.agentName.charAt(0).toUpperCase()}</Text>
           </View>
           <View style={styles.agentInfo}>
-            <Text style={styles.agentName}>{requirement.agentName}</Text>
-            <Text style={styles.agency}>{requirement.agentAgency}</Text>
+            <View style={styles.agentNameRow}>
+              <Text style={styles.agentName} numberOfLines={1}>{requirement.agentName}</Text>
+              <Ionicons name="shield-checkmark" size={13} color={colors.primaryDark} />
+            </View>
+            <Text style={styles.agency} numberOfLines={1}>{requirement.agentAgency}</Text>
           </View>
-          <Ionicons name="shield-checkmark-outline" size={18} color={colors.primaryDark} />
+          <Ionicons name="chevron-forward" size={17} color={colors.textMuted} />
         </Pressable>
 
         <View style={styles.requestBox}>
+          <Text style={styles.needLabel}>Buyer demand</Text>
           <Text style={styles.propertyType} numberOfLines={1}>{requirement.propertyType}</Text>
-          <Text style={styles.location} numberOfLines={1}>
-            {requirement.city}{location ? ` · ${location}` : ''}
-          </Text>
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+            <Text style={styles.location} numberOfLines={1}>
+              {requirement.city}{location ? ` · ${location}` : ''}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.infoGrid}>
-          <View style={styles.infoPill}>
-            <Ionicons name="resize-outline" size={12} color={colors.textSecondary} />
-            <Text style={styles.infoText}>
-              {requirement.size ? `${requirement.size} ${requirement.sizeUnit || ''}` : 'Any size'}
-            </Text>
-          </View>
-          <View style={styles.infoPillWide}>
-            <Ionicons name="wallet-outline" size={12} color={colors.textSecondary} />
-            <Text style={styles.infoText} numberOfLines={1}>{budgetText(requirement)}</Text>
-          </View>
+          <InfoPill
+            icon="resize-outline"
+            label={requirement.size ? `${requirement.size} ${requirement.sizeUnit || ''}` : 'Any size'}
+          />
+          <InfoPill icon="wallet-outline" label={budgetText(requirement)} />
         </View>
 
         {requirement.description ? (
-          <Text style={styles.description} numberOfLines={1}>{requirement.description}</Text>
+          <Text style={styles.description} numberOfLines={2}>{requirement.description}</Text>
         ) : null}
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Demand post</Text>
-          <Text style={styles.footerAction}>Match inventory →</Text>
+          <View style={styles.footerLeft}>
+            <Ionicons name="radio-outline" size={14} color="#8A6414" />
+            <Text style={styles.footerText}>Demand post</Text>
+          </View>
+          <View style={styles.footerActionWrap}>
+            <Text style={styles.footerAction}>Match inventory</Text>
+            <Ionicons name="chevron-forward" size={14} color="#8A6414" />
+          </View>
         </View>
       </View>
     </View>
@@ -115,26 +128,38 @@ export default React.memo(RequirementCard);
 
 const styles = StyleSheet.create({
   cardWrap: {
-    marginHorizontal: 10,
-    marginVertical: 5,
+    marginHorizontal: 12,
+    marginVertical: 7,
   },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    padding: 9,
-    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: '#FFFCF2',
+    borderRadius: 22,
+    padding: 14,
+    borderWidth: 1,
     borderColor: '#E8D28A',
     shadowColor: colors.shadowDark,
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 1,
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  cardUrgent: {
+    borderColor: '#F0B84A',
+  },
+  goldAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    backgroundColor: '#D6A329',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 10,
     gap: 8,
   },
   badgeRow: {
@@ -148,152 +173,193 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#FFF7D6',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 12,
+    backgroundColor: '#FFF3C4',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#E8D28A',
   },
   typeText: {
-    color: colors.primaryDark,
+    color: '#8A6414',
     fontSize: 9,
     fontWeight: '900',
     textTransform: 'uppercase',
+    letterSpacing: 0.22,
   },
   urgentBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
     backgroundColor: colors.error,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 12,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
   },
   urgentText: {
     color: colors.white,
     fontSize: 9,
     fontWeight: '900',
     textTransform: 'uppercase',
+    letterSpacing: 0.22,
   },
   normalBadge: {
-    backgroundColor: colors.gray100,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 12,
+    backgroundColor: colors.gray50,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   normalText: {
     color: colors.textSecondary,
     fontSize: 9,
     fontWeight: '900',
     textTransform: 'uppercase',
+    letterSpacing: 0.22,
   },
   date: {
     fontSize: 10,
     color: colors.textMuted,
+    fontWeight: '800',
   },
   agentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 11,
   },
   agentRowPressed: {
-    opacity: 0.7,
+    opacity: 0.76,
   },
   avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: colors.primaryLight,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.primaryDark,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 9,
+    marginRight: 10,
   },
   avatarText: {
     color: colors.white,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '900',
   },
   agentInfo: {
     flex: 1,
   },
+  agentNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   agentName: {
     fontSize: 14,
     fontWeight: '900',
     color: colors.text,
+    maxWidth: '88%',
   },
   agency: {
     fontSize: 11,
     color: colors.textSecondary,
-    marginTop: 1,
+    marginTop: 2,
+    fontWeight: '700',
   },
   requestBox: {
-    backgroundColor: colors.gray50,
-    borderRadius: 11,
-    padding: 7,
-    marginBottom: 5,
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    padding: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#E8D28A',
+  },
+  needLabel: {
+    color: '#8A6414',
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.25,
+    marginBottom: 3,
   },
   propertyType: {
-    fontSize: 15,
+    fontSize: 18,
     fontWeight: '900',
     color: colors.text,
+    letterSpacing: -0.2,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
   },
   location: {
+    flex: 1,
     fontSize: 12,
     color: colors.textSecondary,
-    marginTop: 3,
+    fontWeight: '700',
   },
   infoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 5,
-    marginTop: 5,
-    marginBottom: 0,
+    gap: 6,
+    marginTop: 10,
   },
   infoPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: colors.gray50,
-    borderRadius: 10,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-  },
-  infoPillWide: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: colors.gray50,
-    borderRadius: 10,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    flexShrink: 1,
+    backgroundColor: '#FFF3C4',
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#E8D28A',
+    maxWidth: '100%',
   },
   infoText: {
     fontSize: 11,
-    color: colors.textSecondary,
-    fontWeight: '700',
+    color: '#8A6414',
+    fontWeight: '900',
   },
   description: {
     fontSize: 12,
     color: colors.text,
-    marginTop: 0,
+    lineHeight: 17,
+    marginTop: 10,
+    fontWeight: '700',
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 6,
-    paddingTop: 6,
+    marginTop: 13,
+    paddingTop: 11,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    borderTopColor: '#E8D28A',
+    gap: 10,
+  },
+  footerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
   footerText: {
     fontSize: 11,
-    color: colors.textMuted,
-    fontWeight: '700',
+    color: '#8A6414',
+    fontWeight: '900',
+  },
+  footerActionWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#FFF3C4',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   footerAction: {
     fontSize: 11,
-    color: colors.primaryDark,
+    color: '#8A6414',
     fontWeight: '900',
   },
 });
