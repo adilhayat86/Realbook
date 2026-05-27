@@ -1,4 +1,5 @@
 import { MOCK_LISTINGS, MOCK_USER } from '@/data/mockData';
+import { cloudListingService } from '@/services/cloudListingService';
 import { getStoredValue, updateStoredValue } from '@/services/localRepository';
 import { Listing, ListingStatus, PostFormData, UserProfile } from '@/types';
 
@@ -32,6 +33,10 @@ function parseMoney(value?: string): number {
 
 function activeListings(listings: Listing[]): Listing[] {
   return listings.filter((listing) => !listing.status || listing.status === 'active');
+}
+
+function recordRoomListings(listings: Listing[]): Listing[] {
+  return listings.filter((listing) => listing.status === 'record_room' || listing.status === 'archive');
 }
 
 function validateListingInput(data: PostFormData): string[] {
@@ -142,21 +147,42 @@ function toListing(data: PostFormData, profile: UserProfile = MOCK_USER): Listin
 
 export const listingService = {
   async getListings(): Promise<Listing[]> {
+    if (cloudListingService.isReady()) {
+      const cloudListings = await cloudListingService.getListings();
+      if (cloudListings) return cloudListings;
+    }
+
     const listings = await getStoredValue<Listing[]>(LISTINGS_KEY, MOCK_LISTINGS);
     return activeListings(listings);
   },
 
   async getAllListings(): Promise<Listing[]> {
+    if (cloudListingService.isReady()) {
+      const cloudListings = await cloudListingService.getAllListings();
+      if (cloudListings) return cloudListings;
+    }
+
     return getStoredValue<Listing[]>(LISTINGS_KEY, MOCK_LISTINGS);
   },
 
   async getRecordRoomListings(): Promise<Listing[]> {
+    if (cloudListingService.isReady()) {
+      const cloudListings = await cloudListingService.getRecordRoomListings();
+      if (cloudListings) return cloudListings;
+    }
+
     const listings = await getStoredValue<Listing[]>(LISTINGS_KEY, MOCK_LISTINGS);
-    return listings.filter((listing) => listing.status === 'record_room' || listing.status === 'archive');
+    return recordRoomListings(listings);
   },
 
   async createListing(data: PostFormData, profile: UserProfile): Promise<Listing> {
     const newListing = toListing(data, profile);
+
+    if (cloudListingService.isReady()) {
+      const cloudListing = await cloudListingService.createListing(newListing);
+      if (cloudListing) return cloudListing;
+    }
+
     await updateStoredValue<Listing[]>(LISTINGS_KEY, MOCK_LISTINGS, (current) => [
       newListing,
       ...current,
@@ -170,6 +196,11 @@ export const listingService = {
   ): Promise<Listing[]> {
     if (typeof updates.price === 'number' && updates.price <= 0) {
       throw new Error('Price must be greater than zero.');
+    }
+
+    if (cloudListingService.isReady()) {
+      const cloudListings = await cloudListingService.updateListingDetails(listingId, updates);
+      if (cloudListings) return cloudListings;
     }
 
     return updateStoredValue<Listing[]>(
@@ -190,6 +221,11 @@ export const listingService = {
   },
 
   async markListingSold(listingId: string): Promise<Listing[]> {
+    if (cloudListingService.isReady()) {
+      const cloudListings = await cloudListingService.updateListingStatus(listingId, 'sold');
+      if (cloudListings) return cloudListings;
+    }
+
     return updateStoredValue<Listing[]>(
       LISTINGS_KEY,
       MOCK_LISTINGS,
@@ -207,6 +243,11 @@ export const listingService = {
   },
 
   async archiveListing(listingId: string): Promise<Listing[]> {
+    if (cloudListingService.isReady()) {
+      const cloudListings = await cloudListingService.updateListingStatus(listingId, 'archive');
+      if (cloudListings) return cloudListings;
+    }
+
     return updateStoredValue<Listing[]>(
       LISTINGS_KEY,
       MOCK_LISTINGS,
@@ -225,6 +266,11 @@ export const listingService = {
   },
 
   async refreshListing(listingId: string): Promise<Listing[]> {
+    if (cloudListingService.isReady()) {
+      const cloudListings = await cloudListingService.updateListingStatus(listingId, 'active');
+      if (cloudListings) return cloudListings;
+    }
+
     return updateStoredValue<Listing[]>(
       LISTINGS_KEY,
       MOCK_LISTINGS,
@@ -242,6 +288,11 @@ export const listingService = {
   },
 
   async removeListing(listingId: string): Promise<Listing[]> {
+    if (cloudListingService.isReady()) {
+      const cloudListings = await cloudListingService.removeListing(listingId);
+      if (cloudListings) return cloudListings;
+    }
+
     const nextListings = await updateStoredValue<Listing[]>(
       LISTINGS_KEY,
       MOCK_LISTINGS,
@@ -265,6 +316,11 @@ export const listingService = {
     listingId: string,
     status: Exclude<ListingStatus, 'record_room'>
   ): Promise<Listing[]> {
+    if (cloudListingService.isReady()) {
+      const cloudListings = await cloudListingService.updateListingStatus(listingId, status);
+      if (cloudListings) return cloudListings;
+    }
+
     return updateStoredValue<Listing[]>(
       LISTINGS_KEY,
       MOCK_LISTINGS,
@@ -300,6 +356,11 @@ export const listingService = {
   },
 
   async incrementCommentCount(listingId: string): Promise<Listing[]> {
+    if (cloudListingService.isReady()) {
+      const cloudListings = await cloudListingService.incrementCommentCount(listingId);
+      if (cloudListings) return cloudListings;
+    }
+
     const nextListings = await updateStoredValue<Listing[]>(
       LISTINGS_KEY,
       MOCK_LISTINGS,
