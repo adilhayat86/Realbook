@@ -30,6 +30,7 @@ import { AuthUser, updateStoredAuthUserRole } from '@/services/authService';
 import { commentService, ListingComment } from '@/services/commentService';
 import { listingService } from '@/services/listingService';
 import { requirementService } from '@/services/requirementService';
+import { savedListingService } from '@/services/savedListingService';
 import { colors } from '@/theme/colors';
 
 interface AppContextType {
@@ -39,22 +40,26 @@ interface AppContextType {
   agents: Agent[];
   requirements: Requirement[];
   recordRoomListings: Listing[];
+  savedListingIds: string[];
+  savedListings: Listing[];
   commentsByListing: Record<string, ListingComment[]>;
   profile: UserProfile;
   isLoading: boolean;
   refreshAppData: () => Promise<void>;
-  addListing: (data: PostFormData) => void;
-  removeListing: (listingId: string) => void;
+  addListing: (data: PostFormData) => Promise<void>;
+  removeListing: (listingId: string) => Promise<void>;
   updateListingStatus: (
     listingId: string,
     status: Exclude<ListingStatus, 'record_room'>
   ) => Promise<void>;
-  addRequirement: (requirement: Requirement) => void;
+  addRequirement: (requirement: Requirement) => Promise<void>;
   addComment: (listingId: string, text: string) => Promise<void>;
-  approveAgent: (agentId: string) => void;
-  rejectAgent: (agentId: string) => void;
-  toggleFollow: (agentId: string) => void;
-  toggleAgentBan: (agentId: string) => void;
+  approveAgent: (agentId: string) => Promise<void>;
+  rejectAgent: (agentId: string) => Promise<void>;
+  toggleFollow: (agentId: string) => Promise<void>;
+  toggleAgentBan: (agentId: string) => Promise<void>;
+  toggleSavedListing: (listingId: string) => Promise<void>;
+  isListingSaved: (listingId: string) => boolean;
   updateProfile: (updates: Partial<UserProfile>) => void;
   searchListings: (filters: SearchFilters) => Listing[];
 }
@@ -106,6 +111,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [profileOverrides, setProfileOverrides] = useState<Partial<UserProfile>>({});
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [recordRoomListings, setRecordRoomListings] = useState<Listing[]>([]);
+  const [savedListingIds, setSavedListingIds] = useState<string[]>([]);
   const [commentsByListing, setCommentsByListing] =
     useState<Record<string, ListingComment[]>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -136,6 +142,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         storedRequirements,
         storedComments,
         storedRecordRoomListings,
+        storedSavedListingIds,
       ] = await Promise.all([
         listingService.getListings(),
         listingService.getAllListings(),
@@ -143,6 +150,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         requirementService.getRequirements(),
         commentService.getCommentsByListing(),
         listingService.getRecordRoomListings(),
+        savedListingService.getSavedListingIds(user?.id ?? ''),
       ]);
 
       setListings(withLiveCommentCounts(storedListings, storedComments));
@@ -151,12 +159,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setRequirements(storedRequirements);
       setCommentsByListing(storedComments);
       setRecordRoomListings(withLiveCommentCounts(storedRecordRoomListings, storedComments));
+      setSavedListingIds(storedSavedListingIds);
     } finally {
       if (showGlobalLoading) {
         setIsLoading(false);
       }
     }
-  }, []);
+  }, [user?.id]);
 
   const refreshAppData = useCallback(() => loadAppData(false), [loadAppData]);
 
@@ -166,6 +175,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setProfileOverrides({});
+    setSavedListingIds([]);
   }, [user?.id]);
 
   const addListing = useCallback(
@@ -271,6 +281,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [agents, role]
   );
 
+  const toggleSavedListing = useCallback(async (listingId: string) => {
+    if (!user?.id || role === 'guest' || role === 'banned') return;
+    const listing = allListings.find((item) => item.id === listingId);
+    if (listing?.agentId === profile.id) return;
+    const nextSavedListingIds = await savedListingService.toggleSavedListing(user.id, listingId);
+    setSavedListingIds(nextSavedListingIds);
+  }, [allListings, profile.id, role, user?.id]);
+
+  const isListingSaved = useCallback(
+    (listingId: string) => savedListingIds.includes(listingId),
+    [savedListingIds]
+  );
+
   const updateProfile = useCallback((updates: Partial<UserProfile>) => {
     setProfileOverrides((prev) => ({ ...prev, ...updates }));
   }, []);
@@ -307,6 +330,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const feedListings = getRankedFeedListings(listings, profile, agents);
+  const savedListings = useMemo(
+    () => savedListingIds
+      .map((id) => allListings.find((listing) => listing.id === id))
+      .filter((listing): listing is Listing => Boolean(listing)),
+    [allListings, savedListingIds]
+  );
 
   if (isLoading) {
     return (
@@ -326,6 +355,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         agents,
         requirements,
         recordRoomListings,
+        savedListingIds,
+        savedListings,
         commentsByListing,
         profile,
         isLoading,
@@ -339,6 +370,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         rejectAgent,
         toggleFollow,
         toggleAgentBan,
+        toggleSavedListing,
+        isListingSaved,
         updateProfile,
         searchListings,
       }}
