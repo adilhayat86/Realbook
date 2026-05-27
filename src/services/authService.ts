@@ -1,6 +1,7 @@
 import { UserRole } from '@/types';
 import { getStoredValue, setStoredValue, updateStoredValue } from '@/services/localRepository';
 import { agentService } from '@/services/agentService';
+import { cloudUserService, CloudAuthUser } from '@/services/cloudUserService';
 
 export interface AuthUser {
   id: string;
@@ -55,20 +56,7 @@ async function getStoredUsers() {
   return getStoredValue<StoredAuthUser[]>(AUTH_USERS_KEY, []);
 }
 
-export async function loginWithMobile(mobile: string, passcode: string): Promise<AuthUser | null> {
-  const normalizedMobile = mobile.trim();
-  const isDemoAdmin = normalizedMobile === '03000000000';
-
-  if (!isValidMobile(normalizedMobile) || (!isDemoAdmin && !isValidPasscode(passcode))) {
-    return null;
-  }
-
-  const storedUsers = await getStoredUsers();
-  const existingUser = storedUsers.find((user) => user.mobile === normalizedMobile);
-  if (existingUser) {
-    return existingUser.passcode === passcode ? publicUser(existingUser) : null;
-  }
-
+function buildDemoUser(normalizedMobile: string, isDemoAdmin: boolean): AuthUser {
   return {
     id: isDemoAdmin ? 'admin-1' : 'user-1',
     name: isDemoAdmin ? 'Admin User' : 'Test User',
@@ -83,6 +71,28 @@ export async function loginWithMobile(mobile: string, passcode: string): Promise
   };
 }
 
+export async function loginWithMobile(mobile: string, passcode: string): Promise<AuthUser | null> {
+  const normalizedMobile = mobile.trim();
+  const isDemoAdmin = normalizedMobile === '03000000000';
+
+  if (!isValidMobile(normalizedMobile) || (!isDemoAdmin && !isValidPasscode(passcode))) {
+    return null;
+  }
+
+  if (cloudUserService.isReady() && !isDemoAdmin) {
+    const cloudUser = await cloudUserService.loginWithMobile(normalizedMobile, passcode);
+    if (cloudUser) return cloudUser;
+  }
+
+  const storedUsers = await getStoredUsers();
+  const existingUser = storedUsers.find((user) => user.mobile === normalizedMobile);
+  if (existingUser) {
+    return existingUser.passcode === passcode ? publicUser(existingUser) : null;
+  }
+
+  return buildDemoUser(normalizedMobile, isDemoAdmin);
+}
+
 export async function registerWithMobile(input: SignUpInput): Promise<AuthUser | null> {
   const normalizedMobile = input.mobile.trim();
   const normalizedPasscode = input.passcode.trim();
@@ -93,7 +103,10 @@ export async function registerWithMobile(input: SignUpInput): Promise<AuthUser |
 
   const storedUsers = await getStoredUsers();
   const existingUser = storedUsers.find((user) => user.mobile === normalizedMobile);
-  const userId = existingUser?.id || `user-${Date.now()}`;
+  const cloudExistingUser = cloudUserService.isReady()
+    ? await cloudUserService.getUserByMobile(normalizedMobile)
+    : null;
+  const userId = cloudExistingUser?.id || existingUser?.id || `user-${Date.now()}`;
   const nextUser: StoredAuthUser = {
     id: userId,
     name: input.name.trim(),
@@ -109,6 +122,26 @@ export async function registerWithMobile(input: SignUpInput): Promise<AuthUser |
     cnicFront: input.cnicFront,
     cnicBack: input.cnicBack,
   };
+
+  if (cloudUserService.isReady()) {
+    const cloudUser = await cloudUserService.saveUser(nextUser as CloudAuthUser);
+    if (cloudUser) {
+      await agentService.createPendingAgent({
+        id: userId,
+        name: nextUser.name,
+        mobile: normalizedMobile,
+        agency: nextUser.agency || '',
+        city: nextUser.city || '',
+        officeAddress: nextUser.officeAddress,
+        visitingCardFront: nextUser.visitingCardFront,
+        visitingCardBack: nextUser.visitingCardBack,
+        cnicFront: nextUser.cnicFront,
+        cnicBack: nextUser.cnicBack,
+      });
+      return cloudUser;
+    }
+  }
+
   const withoutDuplicate = storedUsers.filter((user) => user.mobile !== normalizedMobile);
   await setStoredValue(AUTH_USERS_KEY, [...withoutDuplicate, nextUser]);
   await agentService.createPendingAgent({
@@ -130,6 +163,11 @@ export async function updateStoredAuthUserRole(
   userId: string,
   role: UserRole
 ): Promise<AuthUser | null> {
+  if (cloudUserService.isReady()) {
+    const cloudUser = await cloudUserService.updateUserRole(userId, role);
+    if (cloudUser) return cloudUser;
+  }
+
   let updatedUser: StoredAuthUser | null = null;
   await updateStoredValue<StoredAuthUser[]>(AUTH_USERS_KEY, [], (current) =>
     current.map((user) => {
