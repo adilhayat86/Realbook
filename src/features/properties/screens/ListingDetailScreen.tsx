@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
-  Alert,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -25,6 +25,15 @@ type Props =
   | NativeStackScreenProps<ProfileStackParamList, 'ListingDetail'>;
 
 type ListingBucket = 'active' | 'sold' | 'archive';
+
+type OwnerConfirmation = {
+  status: ListingBucket;
+  message: string;
+  title: string;
+  body: string;
+  confirmLabel: string;
+  destructive?: boolean;
+};
 
 function getListingStatus(listing: Listing): ListingBucket {
   if (listing.status === 'sold') return 'sold';
@@ -93,6 +102,8 @@ export function ListingDetailScreen({ navigation, route }: Props) {
   const listing = allListings.find((item) => item.id === listingId) ?? listings.find((item) => item.id === listingId);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [ownerFeedback, setOwnerFeedback] = useState('');
+  const [ownerConfirmation, setOwnerConfirmation] =
+    useState<OwnerConfirmation | null>(null);
 
   if (!listing) {
     return (
@@ -145,29 +156,15 @@ export function ListingDetailScreen({ navigation, route }: Props) {
     setOwnerFeedback(message);
   };
 
-  const confirmOwnerStatus = ({
-    status,
-    message,
-    title: confirmTitle,
-    body,
-    confirmLabel,
-    destructive,
-  }: {
-    status: ListingBucket;
-    message: string;
-    title: string;
-    body: string;
-    confirmLabel: string;
-    destructive?: boolean;
-  }) => {
-    Alert.alert(confirmTitle, body, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: confirmLabel,
-        style: destructive ? 'destructive' : 'default',
-        onPress: () => void updateOwnerStatus(status, message),
-      },
-    ]);
+  const confirmOwnerStatus = (confirmation: OwnerConfirmation) => {
+    setOwnerConfirmation(confirmation);
+  };
+
+  const runOwnerConfirmation = async () => {
+    if (!ownerConfirmation) return;
+    const { status, message } = ownerConfirmation;
+    setOwnerConfirmation(null);
+    await updateOwnerStatus(status, message);
   };
 
   const ownerListingTitle = listingTitle(listing);
@@ -484,6 +481,42 @@ export function ListingDetailScreen({ navigation, route }: Props) {
           <Text style={styles.actionHint}>{isOwner ? 'Public contact and offer actions are hidden on your own listing.' : 'Call, WhatsApp and Offer are placeholders until the real contact/offer flow is connected.'}</Text>
         </View>
       </ScrollView>
+      <Modal
+        visible={Boolean(ownerConfirmation)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setOwnerConfirmation(null)}
+      >
+        <View style={styles.confirmBackdrop}>
+          <View style={styles.confirmCard}>
+            <Text style={styles.confirmTitle}>{ownerConfirmation?.title}</Text>
+            <Text style={styles.confirmBody}>{ownerConfirmation?.body}</Text>
+            <View style={styles.confirmActions}>
+              <Pressable
+                style={styles.confirmCancelButton}
+                onPress={() => setOwnerConfirmation(null)}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel"
+              >
+                <Text style={styles.confirmCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.confirmPrimaryButton,
+                  ownerConfirmation?.destructive && styles.confirmDangerButton,
+                ]}
+                onPress={() => void runOwnerConfirmation()}
+                accessibilityRole="button"
+                accessibilityLabel={ownerConfirmation?.confirmLabel || 'Confirm'}
+              >
+                <Text style={styles.confirmPrimaryText}>
+                  {ownerConfirmation?.confirmLabel}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -904,5 +937,66 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginTop: 10,
     textAlign: 'center',
+  },
+  confirmBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(17, 27, 33, 0.48)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  confirmCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
+  confirmTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: colors.text,
+  },
+  confirmBody: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 19,
+    marginTop: 8,
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 18,
+  },
+  confirmCancelButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 12,
+    backgroundColor: colors.gray100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmPrimaryButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmDangerButton: {
+    backgroundColor: colors.error,
+  },
+  confirmCancelText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: colors.textSecondary,
+  },
+  confirmPrimaryText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: colors.white,
   },
 });
