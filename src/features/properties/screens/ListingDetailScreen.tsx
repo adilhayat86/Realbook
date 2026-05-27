@@ -16,11 +16,20 @@ import { useAuth } from '@/context/AuthContext';
 import { FeedStackParamList, ProfileStackParamList } from '@/navigation/types';
 import { formatPrice, formatTagLabel } from '@/data/mockData';
 import { canComment } from '@/utils/permissions';
+import { Listing } from '@/types';
 import { colors } from '@/theme/colors';
 
 type Props =
   | NativeStackScreenProps<FeedStackParamList, 'ListingDetail'>
   | NativeStackScreenProps<ProfileStackParamList, 'ListingDetail'>;
+
+type ListingBucket = 'active' | 'sold' | 'archive';
+
+function getListingStatus(listing: Listing): ListingBucket {
+  if (listing.status === 'sold') return 'sold';
+  if (listing.status === 'archive') return 'archive';
+  return 'active';
+}
 
 function Field({ label, value }: { label: string; value?: string | number }) {
   if (value == null || value === '') return null;
@@ -73,11 +82,12 @@ function ActionButton({
 }
 
 export function ListingDetailScreen({ navigation, route }: Props) {
-  const { listings } = useApp();
+  const { listings, allListings, profile, updateListingStatus } = useApp();
   const { role } = useAuth();
   const { listingId } = route.params;
-  const listing = listings.find((item) => item.id === listingId);
+  const listing = allListings.find((item) => item.id === listingId) ?? listings.find((item) => item.id === listingId);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [ownerFeedback, setOwnerFeedback] = useState('');
 
   if (!listing) {
     return (
@@ -106,6 +116,8 @@ export function ListingDetailScreen({ navigation, route }: Props) {
       : 'Size not added';
   const canUserComment = canComment(role);
   const expertiseAreas = listing.agentExpertise.slice(0, 3);
+  const isOwner = listing.agentId === profile.id;
+  const listingStatus = getListingStatus(listing);
 
   const goToComments = () => {
     (navigation as any).navigate('Comments', { listingId: listing.id });
@@ -121,6 +133,11 @@ export function ListingDetailScreen({ navigation, route }: Props) {
 
   const previousImage = () => {
     setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
+  };
+
+  const updateOwnerStatus = async (status: ListingBucket, message: string) => {
+    await updateListingStatus(listing.id, status);
+    setOwnerFeedback(message);
   };
 
   return (
@@ -180,6 +197,11 @@ export function ListingDetailScreen({ navigation, route }: Props) {
                   <Text style={styles.soldBadgeText}>Sold</Text>
                 </View>
               ) : null}
+              {listing.status === 'archive' ? (
+                <View style={styles.soldBadge}>
+                  <Text style={styles.soldBadgeText}>Archived</Text>
+                </View>
+              ) : null}
             </View>
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.price}>{formatPrice(listing.price)}</Text>
@@ -209,6 +231,39 @@ export function ListingDetailScreen({ navigation, route }: Props) {
             <Text style={styles.quickStatValue}>{listing.offerCount}</Text>
           </View>
         </View>
+
+        {isOwner ? (
+          <View style={styles.ownerCard}>
+            <View style={styles.ownerHeader}>
+              <View>
+                <Text style={styles.ownerEyebrow}>Owner controls</Text>
+                <Text style={styles.ownerTitle}>Manage this listing</Text>
+              </View>
+              <View style={styles.ownerStatusPill}>
+                <Text style={styles.ownerStatusText}>{listingStatus}</Text>
+              </View>
+            </View>
+            <Text style={styles.ownerHint}>Only you can see these inventory actions.</Text>
+            {ownerFeedback ? <Text style={styles.ownerFeedback}>{ownerFeedback}</Text> : null}
+            <View style={styles.actionsGrid}>
+              {listingStatus === 'active' ? (
+                <>
+                  <ActionButton icon="refresh-outline" label="Refresh" primary onPress={() => updateOwnerStatus('active', 'Listing refreshed.')} />
+                  <ActionButton icon="checkmark-done-outline" label="Mark as Sold" onPress={() => updateOwnerStatus('sold', 'Listing moved to Sold.')} />
+                  <ActionButton icon="archive-outline" label="Archive" onPress={() => updateOwnerStatus('archive', 'Listing archived.')} />
+                  <ActionButton icon="create-outline" label="Edit Soon" onPress={() => setOwnerFeedback('Edit Listing is next in the build plan.')} />
+                </>
+              ) : listingStatus === 'sold' ? (
+                <>
+                  <ActionButton icon="refresh-outline" label="Reactivate" primary onPress={() => updateOwnerStatus('active', 'Listing reactivated.')} />
+                  <ActionButton icon="archive-outline" label="Archive" onPress={() => updateOwnerStatus('archive', 'Listing archived.')} />
+                </>
+              ) : (
+                <ActionButton icon="return-up-back-outline" label="Restore" primary onPress={() => updateOwnerStatus('active', 'Listing restored to Active.')} />
+              )}
+            </View>
+          </View>
+        ) : null}
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Property Information</Text>
@@ -264,27 +319,29 @@ export function ListingDetailScreen({ navigation, route }: Props) {
           </View>
         ) : null}
 
-        <Pressable
-          style={({ pressed }) => [styles.agentCard, pressed && styles.agentCardPressed]}
-          onPress={goToAgent}
-          accessibilityRole="button"
-          accessibilityLabel={`Open ${listing.agentName} profile`}
-        >
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{listing.agentName.charAt(0).toUpperCase()}</Text>
-          </View>
-          <View style={styles.agentInfo}>
-            <View style={styles.agentNameRow}>
-              <Text style={styles.agentName}>{listing.agentName}</Text>
-              <Ionicons name="shield-checkmark" size={15} color={colors.primaryDark} />
+        {!isOwner ? (
+          <Pressable
+            style={({ pressed }) => [styles.agentCard, pressed && styles.agentCardPressed]}
+            onPress={goToAgent}
+            accessibilityRole="button"
+            accessibilityLabel={`Open ${listing.agentName} profile`}
+          >
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{listing.agentName.charAt(0).toUpperCase()}</Text>
             </View>
-            <Text style={styles.agency}>{listing.agentAgency}</Text>
-            {expertiseAreas.length > 0 ? (
-              <Text style={styles.expertise}>{expertiseAreas.join(' · ')}</Text>
-            ) : null}
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </Pressable>
+            <View style={styles.agentInfo}>
+              <View style={styles.agentNameRow}>
+                <Text style={styles.agentName}>{listing.agentName}</Text>
+                <Ionicons name="shield-checkmark" size={15} color={colors.primaryDark} />
+              </View>
+              <Text style={styles.agency}>{listing.agentAgency}</Text>
+              {expertiseAreas.length > 0 ? (
+                <Text style={styles.expertise}>{expertiseAreas.join(' · ')}</Text>
+              ) : null}
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </Pressable>
+        ) : null}
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Actions</Text>
@@ -307,11 +364,15 @@ export function ListingDetailScreen({ navigation, route }: Props) {
 
           <View style={styles.actionsGrid}>
             <ActionButton icon="chatbubble-outline" label="Comments" primary={canUserComment} onPress={goToComments} />
-            <ActionButton icon="call-outline" label="Call" onPress={() => {}} />
-            <ActionButton icon="logo-whatsapp" label="WhatsApp" onPress={() => {}} />
-            <ActionButton icon="pricetag-outline" label="Offer" onPress={() => {}} />
+            {!isOwner ? (
+              <>
+                <ActionButton icon="call-outline" label="Call" onPress={() => {}} />
+                <ActionButton icon="logo-whatsapp" label="WhatsApp" onPress={() => {}} />
+                <ActionButton icon="pricetag-outline" label="Offer" onPress={() => {}} />
+              </>
+            ) : null}
           </View>
-          <Text style={styles.actionHint}>Call, WhatsApp and Offer are placeholders until the real contact/offer flow is connected.</Text>
+          <Text style={styles.actionHint}>{isOwner ? 'Public contact and offer actions are hidden on your own listing.' : 'Call, WhatsApp and Offer are placeholders until the real contact/offer flow is connected.'}</Text>
         </View>
       </ScrollView>
     </View>
@@ -494,6 +555,59 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontWeight: '900',
     textAlign: 'center',
+  },
+  ownerCard: {
+    backgroundColor: colors.surface,
+    marginHorizontal: 12,
+    marginBottom: 10,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.primary,
+  },
+  ownerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 4,
+  },
+  ownerEyebrow: {
+    fontSize: 10,
+    color: colors.primaryDark,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  ownerTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  ownerStatusPill: {
+    borderRadius: 999,
+    backgroundColor: colors.tagBg,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  ownerStatusText: {
+    color: colors.primaryDark,
+    fontSize: 10,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  ownerHint: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '700',
+    lineHeight: 17,
+    marginBottom: 10,
+  },
+  ownerFeedback: {
+    fontSize: 12,
+    color: colors.primaryDark,
+    fontWeight: '900',
+    marginBottom: 10,
   },
   sectionCard: {
     backgroundColor: colors.surface,
