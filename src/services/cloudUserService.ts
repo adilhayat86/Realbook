@@ -6,7 +6,7 @@ import {
   updateCloudDocument,
 } from '@/firebase/firebaseRepository';
 import { UserRole } from '@/types';
-import { AuthUser } from './authService';
+import type { AuthUser } from './authService';
 
 export interface CloudAuthUser extends AuthUser {
   passcode: string;
