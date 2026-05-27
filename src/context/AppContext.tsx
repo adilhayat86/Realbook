@@ -4,6 +4,7 @@ import React, {
   useState,
   useCallback,
   useEffect,
+  useMemo,
 } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { MOCK_USER } from '../data/mockData';
@@ -25,7 +26,7 @@ import {
 } from '../utils/permissions';
 import { useAuth } from './AuthContext';
 import { agentService } from '@/services/agentService';
-import { updateStoredAuthUserRole } from '@/services/authService';
+import { AuthUser, updateStoredAuthUserRole } from '@/services/authService';
 import { commentService, ListingComment } from '@/services/commentService';
 import { listingService } from '@/services/listingService';
 import { requirementService } from '@/services/requirementService';
@@ -70,17 +71,58 @@ function withLiveCommentCounts(
   }));
 }
 
+function profileFromAuthUser(authUser: AuthUser | null): UserProfile {
+  if (!authUser) return MOCK_USER;
+
+  return {
+    ...MOCK_USER,
+    id: authUser.id || MOCK_USER.id,
+    name: authUser.name || MOCK_USER.name,
+    mobile: authUser.mobile || MOCK_USER.mobile,
+    agency: authUser.agency || MOCK_USER.agency,
+    city: authUser.city || MOCK_USER.city,
+    officeAddress: authUser.officeAddress || MOCK_USER.officeAddress,
+    expertiseAreas: authUser.expertiseAreas?.length
+      ? authUser.expertiseAreas
+      : MOCK_USER.expertiseAreas,
+    role: authUser.role,
+    verified: authUser.role === 'verified_agent' || authUser.role === 'admin',
+    status:
+      authUser.role === 'banned'
+        ? 'banned'
+        : authUser.role === 'pending_agent'
+          ? 'pending'
+          : 'active',
+    visitingCardFront: authUser.visitingCardFront || MOCK_USER.visitingCardFront,
+    visitingCardBack: authUser.visitingCardBack || MOCK_USER.visitingCardBack,
+  };
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const { role, user } = useAuth();
   const [listings, setListings] = useState<Listing[]>([]);
   const [allListings, setAllListings] = useState<Listing[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [profile, setProfile] = useState<UserProfile>(MOCK_USER);
+  const [profileOverrides, setProfileOverrides] = useState<Partial<UserProfile>>({});
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [recordRoomListings, setRecordRoomListings] = useState<Listing[]>([]);
   const [commentsByListing, setCommentsByListing] =
     useState<Record<string, ListingComment[]>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const authProfile = useMemo(() => profileFromAuthUser(user), [user]);
+  const profile = useMemo(
+    () => ({
+      ...authProfile,
+      ...profileOverrides,
+      id: authProfile.id,
+      name: authProfile.name,
+      mobile: authProfile.mobile,
+      role: authProfile.role,
+      verified: authProfile.verified,
+      status: authProfile.status,
+    }),
+    [authProfile, profileOverrides]
+  );
 
   const loadAppData = useCallback(async (showGlobalLoading = true) => {
     if (showGlobalLoading) {
@@ -122,6 +164,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     void loadAppData(true);
   }, [loadAppData, role, user?.id]);
 
+  useEffect(() => {
+    setProfileOverrides({});
+  }, [user?.id]);
+
   const addListing = useCallback(
     async (data: PostFormData) => {
       if (!canPostListings(role)) return;
@@ -146,12 +192,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     async (listingId: string, status: Exclude<ListingStatus, 'record_room'>) => {
       const nextAllListings = await listingService.updateListingStatus(listingId, status);
       const storedComments = await commentService.getCommentsByListing();
+      const nextRecordRoomListings = await listingService.getRecordRoomListings();
       const nextActiveListings = nextAllListings.filter(
         (listing) => !listing.status || listing.status === 'active'
       );
 
       setAllListings(withLiveCommentCounts(nextAllListings, storedComments));
       setListings(withLiveCommentCounts(nextActiveListings, storedComments));
+      setRecordRoomListings(withLiveCommentCounts(nextRecordRoomListings, storedComments));
     },
     []
   );
@@ -197,19 +245,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const approveAgent = useCallback(async (agentId: string) => {
+    if (role !== 'admin') return;
     const nextAgents = await agentService.updateAgentStatus(agentId, 'active');
     await updateStoredAuthUserRole(agentId, 'verified_agent');
     setAgents(nextAgents);
-  }, []);
+  }, [role]);
 
   const rejectAgent = useCallback(async (agentId: string) => {
+    if (role !== 'admin') return;
     const nextAgents = await agentService.updateAgentStatus(agentId, 'rejected');
     await updateStoredAuthUserRole(agentId, 'pending_agent');
     setAgents(nextAgents);
-  }, []);
+  }, [role]);
 
   const toggleAgentBan = useCallback(
     async (agentId: string) => {
+      if (role !== 'admin') return;
       const agent = agents.find((item) => item.id === agentId);
       const nextStatus = agent?.status === 'banned' ? 'active' : 'banned';
       const nextRole = nextStatus === 'banned' ? 'banned' : 'verified_agent';
@@ -217,11 +268,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await updateStoredAuthUserRole(agentId, nextRole);
       setAgents(nextAgents);
     },
-    [agents]
+    [agents, role]
   );
 
   const updateProfile = useCallback((updates: Partial<UserProfile>) => {
-    setProfile((prev) => ({ ...prev, ...updates }));
+    setProfileOverrides((prev) => ({ ...prev, ...updates }));
   }, []);
 
   const searchListings = useCallback(
