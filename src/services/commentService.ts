@@ -1,4 +1,5 @@
 import { MOCK_USER } from '@/data/mockData';
+import { cloudCommentService } from '@/services/cloudCommentService';
 import { getStoredValue, setStoredValue, updateStoredValue } from '@/services/localRepository';
 import { UserProfile } from '@/types';
 
@@ -50,6 +51,11 @@ const INITIAL_COMMENTS: Record<string, ListingComment[]> = {
 
 export const commentService = {
   async getCommentsByListing(): Promise<Record<string, ListingComment[]>> {
+    if (cloudCommentService.isReady()) {
+      const cloudComments = await cloudCommentService.getCommentsByListing();
+      if (cloudComments) return cloudComments;
+    }
+
     return getStoredValue(COMMENTS_KEY, INITIAL_COMMENTS);
   },
 
@@ -58,6 +64,11 @@ export const commentService = {
     text: string,
     user: Pick<UserProfile, 'id' | 'name'> = MOCK_USER
   ): Promise<ListingComment> {
+    if (cloudCommentService.isReady()) {
+      const cloudComment = await cloudCommentService.addComment(listingId, text, user);
+      if (cloudComment) return cloudComment;
+    }
+
     const newComment: ListingComment = {
       id: `c${Date.now()}`,
       listingId,
@@ -81,6 +92,11 @@ export const commentService = {
   },
 
   async removeListingComments(listingId: string): Promise<Record<string, ListingComment[]>> {
+    if (cloudCommentService.isReady()) {
+      const cloudComments = await cloudCommentService.removeListingComments(listingId);
+      if (cloudComments) return cloudComments;
+    }
+
     return updateStoredValue<Record<string, ListingComment[]>>(
       COMMENTS_KEY,
       INITIAL_COMMENTS,
