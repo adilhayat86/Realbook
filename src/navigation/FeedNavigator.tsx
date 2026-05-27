@@ -8,6 +8,7 @@ import { NewFriendsScreen } from '@/features/agents/screens/NewFriendsScreen';
 import { SettingsScreen } from '@/features/profile/screens/SettingsScreen';
 import { AddInventoryScreen } from '@/features/properties/screens/AddInventoryScreen';
 import { MyPropertiesScreen } from '@/features/properties/screens/MyPropertiesScreen';
+import { EditListingScreen } from '@/features/properties/screens/EditListingScreen';
 import { SavedListingsScreen } from '@/features/properties/screens/SavedListingsScreen';
 import { HelpScreen } from '@/features/profile/screens/HelpScreen';
 import { AboutScreen } from '@/features/profile/screens/AboutScreen';
@@ -42,6 +43,7 @@ export function FeedNavigator({ route }: any) {
       <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="AddInventory" component={AddInventoryScreen} />
       <Stack.Screen name="MyProperties" component={MyPropertiesScreen} />
+      <Stack.Screen name="EditListing" component={EditListingScreen} />
       <Stack.Screen name="SavedListings" component={SavedListingsScreen} />
       <Stack.Screen name="Help" component={HelpScreen} />
       <Stack.Screen name="About" component={AboutScreen} />
