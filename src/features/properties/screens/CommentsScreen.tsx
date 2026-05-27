@@ -22,15 +22,17 @@ import { VirtualKeyboard } from '@/components/VirtualKeyboard';
 type Props = NativeStackScreenProps<FeedStackParamList, 'Comments'> | NativeStackScreenProps<ProfileStackParamList, 'Comments'>;
 
 export function CommentsScreen({ navigation, route }: Props) {
-  const { listings, commentsByListing, addComment, agents } = useApp();
+  const { listings, allListings, commentsByListing, addComment, agents } = useApp();
   const { role } = useAuth();
   const nav = useNavigation();
   const { listingId } = route.params;
-  const listing = listings.find((l) => l.id === listingId);
+  const listing = allListings.find((l) => l.id === listingId) ?? listings.find((l) => l.id === listingId);
   const [commentText, setCommentText] = useState('');
   const [error, setError] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const [showKeyboard, setShowKeyboard] = useState(false);
   const comments = commentsByListing[listingId] ?? [];
+  const canWriteComment = role === 'verified_agent' || role === 'admin';
 
   if (!listing) {
     return (
@@ -43,15 +45,18 @@ export function CommentsScreen({ navigation, route }: Props) {
     );
   }
 
-  const handleSendComment = () => {
-    if (role === 'guest' || role === 'pending_agent' || role === 'banned') {
-      setError(
-        role === 'guest'
-          ? 'Login required to post comments.'
-          : role === 'pending_agent'
-            ? 'Admin approval required to post comments.'
-            : 'This account cannot post comments right now.'
-      );
+  const blockedMessage =
+    role === 'guest'
+      ? 'Login required to post comments.'
+      : role === 'pending_agent'
+        ? 'Admin approval required to post comments.'
+        : role === 'banned'
+          ? 'This account cannot post comments right now.'
+          : '';
+
+  const handleSendComment = async () => {
+    if (!canWriteComment) {
+      setError(blockedMessage);
       return;
     }
     const text = commentText.trim();
@@ -59,9 +64,16 @@ export function CommentsScreen({ navigation, route }: Props) {
       setError('Write a comment first.');
       return;
     }
-    addComment(listingId, text);
-    setCommentText('');
-    setError('');
+    setIsSending(true);
+    try {
+      await addComment(listingId, text);
+      setCommentText('');
+      setError('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not post comment. Please try again.');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const renderComment = ({ item }: { item: typeof comments[0] }) => {
@@ -113,18 +125,25 @@ export function CommentsScreen({ navigation, route }: Props) {
         }
       />
       <View style={styles.inputContainer}>
+        {!canWriteComment ? (
+          <View style={styles.lockedComposer}>
+            <Ionicons name="lock-closed-outline" size={18} color={colors.primaryDark} />
+            <Text style={styles.lockedComposerText}>{blockedMessage}</Text>
+          </View>
+        ) : null}
         {error ? <Text style={styles.inputError}>{error}</Text> : null}
-        <View style={styles.inputRow}>
+        <View style={[styles.inputRow, !canWriteComment && styles.inputRowDisabled]}>
           <TextInput
-            style={styles.input}
-            placeholder="Add a comment..."
+            style={[styles.input, !canWriteComment && styles.inputDisabled]}
+            placeholder={canWriteComment ? 'Add a comment...' : 'Login or approval required'}
             placeholderTextColor={colors.textMuted}
             value={commentText}
             onChangeText={setCommentText}
             onSubmitEditing={handleSendComment}
             returnKeyType="send"
+            editable={canWriteComment && !isSending}
           />
-          {Platform.OS === 'web' ? (
+          {Platform.OS === 'web' && canWriteComment ? (
             <Pressable
               style={styles.keyboardButton}
               onPress={() => setShowKeyboard((visible) => !visible)}
@@ -135,16 +154,17 @@ export function CommentsScreen({ navigation, route }: Props) {
             </Pressable>
           ) : null}
           <Pressable
-            style={styles.sendButton}
+            style={[styles.sendButton, (!canWriteComment || isSending) && styles.sendButtonDisabled]}
             onPress={handleSendComment}
             hitSlop={10}
             accessibilityRole="button"
             accessibilityLabel="Send comment"
+            disabled={!canWriteComment || isSending}
           >
-            <Ionicons name="send" size={24} color={colors.primary} />
+            <Ionicons name="send" size={24} color={canWriteComment ? colors.primary : colors.textMuted} />
           </Pressable>
         </View>
-        {Platform.OS === 'web' && showKeyboard ? (
+        {Platform.OS === 'web' && showKeyboard && canWriteComment ? (
           <VirtualKeyboard
             value={commentText}
             onChangeText={setCommentText}
@@ -244,19 +264,41 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
+  lockedComposer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.tagBg,
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 8,
+  },
+  lockedComposerText: {
+    flex: 1,
+    color: colors.primaryDark,
+    fontSize: 12,
+    fontWeight: '800',
+  },
   inputRow: {
     position: 'relative',
+  },
+  inputRowDisabled: {
+    opacity: 0.8,
   },
   inputError: {
     color: colors.error,
     fontSize: 12,
     marginBottom: 8,
+    fontWeight: '700',
   },
   input: {
     fontSize: 14,
     color: colors.text,
     marginRight: 84,
     minHeight: 34,
+  },
+  inputDisabled: {
+    color: colors.textMuted,
   },
   keyboardButton: {
     position: 'absolute',
@@ -275,5 +317,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     bottom: 5,
+  },
+  sendButtonDisabled: {
+    opacity: 0.45,
   },
 });
