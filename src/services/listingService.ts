@@ -4,6 +4,20 @@ import { Listing, ListingStatus, PostFormData, UserProfile } from '@/types';
 
 const LISTINGS_KEY = 'listings';
 
+export type ListingDetailsUpdate = Partial<
+  Pick<
+    Listing,
+    | 'price'
+    | 'description'
+    | 'tags'
+    | 'possessionStatus'
+    | 'registryStatus'
+    | 'mapStatus'
+    | 'duesStatus'
+    | 'nocStatus'
+  >
+>;
+
 function cleanText(value?: string): string {
   return String(value ?? '').trim();
 }
@@ -148,6 +162,31 @@ export const listingService = {
       ...current,
     ]);
     return newListing;
+  },
+
+  async updateListingDetails(
+    listingId: string,
+    updates: ListingDetailsUpdate
+  ): Promise<Listing[]> {
+    if (typeof updates.price === 'number' && updates.price <= 0) {
+      throw new Error('Price must be greater than zero.');
+    }
+
+    return updateStoredValue<Listing[]>(
+      LISTINGS_KEY,
+      MOCK_LISTINGS,
+      (current) =>
+        current.map((listing) => {
+          if (listing.id !== listingId) return listing;
+          return {
+            ...listing,
+            ...updates,
+            tags: updates.tags ? Array.from(new Set(updates.tags)) : listing.tags,
+            description: cleanText(updates.description ?? listing.description),
+            lastReviewedAt: new Date().toISOString(),
+          };
+        })
+    );
   },
 
   async markListingSold(listingId: string): Promise<Listing[]> {
