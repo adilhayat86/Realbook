@@ -118,7 +118,7 @@ export async function updateCloudDocument<T extends object>(
   const db = getCloudDb();
   if (!db) return null;
 
-  await updateDoc(doc(db, collectionName, documentId), value);
+  await updateDoc(doc(db, collectionName, documentId), value as Record<string, unknown>);
   return value;
 }
 
